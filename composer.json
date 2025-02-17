@@ -1,0 +1,33 @@
+{
+  "name": "ap-lib/mysql",
+  "description": "",
+  "type": "library",
+  "homepage": "https://github.com/ap-lib/mysql",
+  "license": "MIT",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "authors": [
+    {
+      "name": "Anton Panfilov"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "AP\\Mysql\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "AP\\Mysql\\Tests\\": "tests/"
+    }
+  },
+  "require": {
+    "php": "^8.3",
+    "ap-lib/logger": "dev-main",
+    "ext-mysqli": "*",
+    "ext-ctype": "*"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "10.5.*"
+  }
+}
