@@ -1,7 +1,9 @@
 <?php declare(strict_types=1);
 
-namespace AP\Mysql;
+namespace AP\Mysql\Connect;
 
+use AP\Mysql\Raw;
+use JsonException;
 use mysqli_result;
 use UnexpectedValueException;
 
@@ -12,6 +14,9 @@ class ConnectDebug implements ConnectInterface
         return true;
     }
 
+    /**
+     * @throws JsonException
+     */
     public function escape(mixed $value): string
     {
         if (is_string($value)) {
@@ -25,6 +30,12 @@ class ConnectDebug implements ConnectInterface
         }
         if (is_int($value) || is_float($value)) {
             return (string)$value;
+        }
+        if ($value instanceof Raw) {
+            return $value->escape($this);
+        }
+        if (is_array($value)) {
+            return json_encode($value, JSON_THROW_ON_ERROR);
         }
 
         throw new UnexpectedValueException('this value can\'t be escaped');

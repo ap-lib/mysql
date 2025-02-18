@@ -1,7 +1,9 @@
 <?php declare(strict_types=1);
 
-namespace AP\Mysql;
+namespace AP\Mysql\Statement;
 
+use AP\Mysql\Connect\ConnectInterface;
+use AP\Mysql\Executable\Select;
 use Closure;
 
 class Where implements Statement

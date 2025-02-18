@@ -1,16 +1,17 @@
 <?php declare(strict_types=1);
 
-namespace AP\Mysql\Tests;
+namespace AP\Mysql\Tests\Statement;
 
-use AP\Mysql\Select;
-use AP\Mysql\Where;
+use AP\Mysql\Connect\ConnectDebug;
+use AP\Mysql\Executable\Select;
+use AP\Mysql\Statement\Where;
 use PHPUnit\Framework\TestCase;
 
 class WhereTest extends TestCase
 {
     static public function w(): Where
     {
-        return new Where(DebugConnection::escapeDebugMode());
+        return new Where(new ConnectDebug());
     }
 
     public function testMain(): void
@@ -49,7 +50,7 @@ class WhereTest extends TestCase
 
     public function testMethods(): void
     {
-        $subSelect = new Select(DebugConnection::escapeDebugMode());
+        $subSelect = new Select(new ConnectDebug());
 
         $this->assertEquals("(foo='boo' or foo in null)", self::w()->cond("foo=%s or foo in null", "boo")->query());
         $this->assertEquals("(foo=1 or foo in null)", self::w()->cond("foo=%s or foo in null", 1)->query());

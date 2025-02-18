@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace AP\Mysql;
+namespace AP\Mysql\Statement;
+
+use AP\Mysql\Connect\ConnectInterface;
 
 class GroupBy
 {

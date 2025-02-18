@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace AP\Mysql;
+namespace AP\Mysql\Connect;
 
 use mysqli_result;
 use mysqli_sql_exception;

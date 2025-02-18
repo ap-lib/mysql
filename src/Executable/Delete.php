@@ -1,6 +1,11 @@
 <?php declare(strict_types=1);
 
-namespace AP\Mysql;
+namespace AP\Mysql\Executable;
+
+use AP\Mysql\Connect\ConnectInterface;
+use AP\Mysql\Statement\OrderBy;
+use AP\Mysql\Statement\Statement;
+use AP\Mysql\Statement\Where;
 
 class Delete implements Statement, Executable
 {
@@ -51,7 +56,7 @@ class Delete implements Statement, Executable
         return $this;
     }
 
-    public function setIgnore(bool $ignore): static
+    public function setIgnore(bool $ignore = true): static
     {
         $this->ignore = $ignore;
         return $this;

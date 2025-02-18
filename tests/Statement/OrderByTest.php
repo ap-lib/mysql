@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace AP\Mysql\Tests;
+namespace AP\Mysql\Tests\Statement;
 
-use AP\Mysql\OrderBy;
+use AP\Mysql\Statement\OrderBy;
 use PHPUnit\Framework\TestCase;
 
 class OrderByTest extends TestCase

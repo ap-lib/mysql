@@ -1,8 +1,10 @@
 <?php declare(strict_types=1);
 
-namespace AP\Mysql;
+namespace AP\Mysql\Connect;
 
 use AP\Logger\Log;
+use AP\Mysql\Raw;
+use JsonException;
 use mysqli;
 use mysqli_result;
 use mysqli_sql_exception;
@@ -10,9 +12,10 @@ use UnexpectedValueException;
 
 class Connect implements ConnectInterface
 {
+    use ConnectStatements;
+
     readonly private mysqli $mysqli;
     private bool            $connected = false;
-    readonly public Upsert  $upsert;
 
     public function __construct(
         readonly private string $hostname,
@@ -25,7 +28,6 @@ class Connect implements ConnectInterface
         readonly private array  $init_commands = [],
     )
     {
-        $this->upsert = new Upsert($this);
     }
 
     protected function log(string $query, float $start, ?float $runtime = null): void
@@ -122,6 +124,9 @@ class Connect implements ConnectInterface
         return $res;
     }
 
+    /**
+     * @throws JsonException
+     */
     public function escape(mixed $value): string
     {
         // TODO: maybe need to add Interface-like code to be able to do custom escapes
@@ -138,8 +143,24 @@ class Connect implements ConnectInterface
         if (is_int($value) || is_float($value)) {
             return (string)$value;
         }
+        if ($value instanceof Raw) {
+            return $value->escape($this);
+        }
+        if (is_array($value)) {
+            return json_encode($value, JSON_THROW_ON_ERROR);
+        }
 
         throw new UnexpectedValueException('this value can\'t be escaped');
+    }
+
+    public function lastInsertId(): int
+    {
+        return (int)$this->driver()->insert_id;
+    }
+
+    public function lastAffectedRows(): int
+    {
+        return (int)$this->driver()->affected_rows;
     }
 
     /**
@@ -157,43 +178,5 @@ class Connect implements ConnectInterface
             throw new UnexpectedValueException("Invalid format for name: $name");
         }
         return '`' . str_replace('.', '`.`', $name) . '`';
-    }
-
-    public function lastInsertId(): int
-    {
-        return (int)$this->driver()->insert_id;
-    }
-
-    public function lastAffectedRows(): int
-    {
-        return (int)$this->driver()->affected_rows;
-    }
-
-    public function update(
-        string $table,
-        array  $assignment,
-               $where_condition,
-               $order_by = null,
-        bool   $ignore = false,
-    )
-    {
-
-    }
-
-    public function delete(
-        string $table,
-        ?array $where = null,
-        ?int   $limit = null,
-    ): Delete
-    {
-        return (new Delete($this, $table, $where, $limit));
-    }
-
-    public function call(
-        string $name,
-        array  $parameters,
-    )
-    {
-
     }
 }

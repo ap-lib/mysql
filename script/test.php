@@ -1,7 +1,8 @@
 <?php declare(strict_types=1);
 
 
-use AP\Mysql\Connect;
+use AP\Mysql\Connect\Connect;
+use AP\Mysql\Executable\InsertBulk;
 
 include __DIR__ . "/../vendor/autoload.php";;
 microtime(true);
@@ -12,36 +13,70 @@ $connect = new Connect(
     "password",
     "auth",
 );
-
-
-//$rows = [];
-//
-//for ($i = 3000; $i < 11050; $i++) {
-//    $rows[] = [
-//        "label" => md5(microtime()),
-//    ];
-//}
-
 $connect->driver();
 
+//$iter = 10000;
+//
+//
+//
+//
+//$start = microtime(true);
+//for ($i = 0; $i < $iter; $i++) {
+//    $connect->insert("test", ["id" => $i, "label" => "hello world"])->query();
+//}
+//echo sprintf("connect->insert()->query (late): %f\n", microtime(true) - $start);
 //
 //$start = microtime(true);
-//for ($i = 0; $i < 100; $i++) {
-//    $connect->upsert->insert("test", ['label' => "hello"]);
+//for ($i = 0; $i < $iter; $i++) {
+//    $connect->upsert->insert("test", ["id" => $i, "label" => "hello world"]);
 //}
-//echo sprintf("connect->upsert->insert: %f\n", microtime(true) - $start);
-//
-//
+//echo sprintf("connect->upsert->indert: %f\n", microtime(true) - $start);
 //
 //die;
-//$label = md5(microtime());
-//$connect->insert("test", ["id" => 1, "label" => $label], true,["label" => $label]);
-//var_export($connect->lastAffectedRows());
-//echo "\n";
-//var_export($connect->lastInsertId());
-//echo "\n";
+
+// connect->upsert->insertBulk: 0.035291     2097152.000000     2097152.000000
+
+$rows = [];
+
+for ($i = 3000; $i < 3050; $i++) {
+    $rows[] = [
+        "label"  => md5(microtime()),
+        "label2" => sha1(microtime()),
+        "label3" => microtime(),
+        "label4" => (int)microtime(true),
+    ];
+}
+
+
+$insertBulk = new InsertBulk($connect, "test", $rows);
+$insertBulk->setBatch(48);
+
+foreach ($insertBulk->queries() as $query){
+    print_r( "$query\n\n");
+}
+
+//$start = microtime(true);
+//for ($i = 0; $i < 10; $i++) {
+//    $connect->upsert->insertBulk("test", $rows);
+//}
+//echo sprintf("connect->upsert->insertBulk: %f\n", microtime(true) - $start);
+
+//$start = microtime(true);
+//for ($i = 0; $i < 10; $i++) {
+//    $connect->upsert->insertBulk2("test", $rows);
+//}
+//echo sprintf("connect->upsert->insertBulk2: %f\n", microtime(true) - $start);
 //
-//die;
+
+die;
+$label = md5(microtime());
+$connect->insert("test", ["id" => 1, "label" => $label], true, ["label" => $label]);
+var_export($connect->lastAffectedRows());
+echo "\n";
+var_export($connect->lastInsertId());
+echo "\n";
+
+die;
 
 $iter = 10000;
 $id   = 123;

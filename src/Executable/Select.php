@@ -1,6 +1,9 @@
 <?php declare(strict_types=1);
 
-namespace AP\Mysql;
+namespace AP\Mysql\Executable;
+
+use AP\Mysql\Connect\ConnectInterface;
+use AP\Mysql\Statement\Statement;
 
 class Select implements Statement
 {
