@@ -4,7 +4,7 @@ namespace AP\Mysql\Executable;
 
 use AP\Mysql\Connect\ConnectInterface;
 use AP\Mysql\Statement\Statement;
-use AP\Mysql\UpsertHelpers;
+use AP\Mysql\Helpers;
 
 class InsertSelect implements Statement, Executable
 {
@@ -56,10 +56,10 @@ class InsertSelect implements Statement, Executable
             ($this->ignore ? ' IGNORE' : '') .
             "`$this->table`" .
             ($this->partition ? " PARTITION ($this->partition)" : '') .
-            UpsertHelpers::prepareCols($this->connect, $this->cols) . ' ' .
+            Helpers::prepareCols($this->connect, $this->cols) . ' ' .
             $this->select->query() .
             (!empty($this->onDupKeyUpdate)
-                ? ' ' . UpsertHelpers::prepareOnDupKeyUpdate($this->connect, $this->onDupKeyUpdate)
+                ? ' ' . Helpers::prepareOnDupKeyUpdate($this->connect, $this->onDupKeyUpdate)
                 : ''
             );
     }

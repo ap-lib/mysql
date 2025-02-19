@@ -19,7 +19,7 @@ class OrderByTest extends TestCase
         $this->assertEquals("`name` DESC", self::o()->desc("name")->query());
         $this->assertEquals("2", self::o()->asc(2)->query());
         $this->assertEquals("2 DESC", self::o()->desc(2)->query());
-        $this->assertEquals("SOME_EXPR()", self::o()->exprAsc("SOME_EXPR()")->query());
+        $this->assertEquals("SOME_EXPR()", self::o()->expr("SOME_EXPR()")->query());
 
         $this->assertEquals(
             "DATE(`created_at`) DESC",

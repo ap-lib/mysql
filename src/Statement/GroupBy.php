@@ -2,16 +2,24 @@
 
 namespace AP\Mysql\Statement;
 
-use AP\Mysql\Connect\ConnectInterface;
-
-class GroupBy
+class GroupBy implements Statement
 {
-    public function __construct(protected ConnectInterface $connect)
+    private string $group = "";
+
+    public function add(string|int $name): static
     {
+        $this->group .= is_string($name) ? ",`$name`" : ",$name";
+        return $this;
     }
 
-    public function get(): string
+    public function expr(string $expr): static
     {
-        return '';
+        $this->group .= ", $expr";
+        return $this;
+    }
+
+    public function query(): string
+    {
+        return substr($this->group, 1);
     }
 }

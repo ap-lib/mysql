@@ -18,7 +18,7 @@ class OrderBy implements Statement
         return $this;
     }
 
-    public function exprAsc(string $expr): static
+    public function expr(string $expr): static
     {
         $this->order .= ",$expr";
         return $this;

@@ -50,7 +50,8 @@ class WhereTest extends TestCase
 
     public function testMethods(): void
     {
-        $subSelect = new Select(new ConnectDebug());
+        $subSelect     = new Select(new ConnectDebug(), "subtable", ["id"], ["name" => "Yuri"]);
+        $subSelectText = $subSelect->query();
 
         $this->assertEquals("(foo='boo' or foo in null)", self::w()->cond("foo=%s or foo in null", "boo")->query());
         $this->assertEquals("(foo=1 or foo in null)", self::w()->cond("foo=%s or foo in null", 1)->query());
@@ -69,11 +70,10 @@ class WhereTest extends TestCase
         $this->assertEquals("`foo` NOT IN (1,2)", self::w()->notIn("foo", [1, 2])->query());
         $this->assertEquals("(`foo`=1)", self::w()->subWhere(self::w()->eq("foo", 1))->query());
         $this->assertEquals("(`foo`=1)", self::w()->subFn(fn(Where $sub) => $sub->eq("foo", 1))->query());
-        // TODO: change to "assertEquals" after select will be done
-        $this->assertStringStartsWith("EXISTS (", self::w()->exists($subSelect)->query());
-        $this->assertStringStartsWith("NOT EXISTS (", self::w()->notExists($subSelect)->query());
-        $this->assertStringStartsWith("`foo` IN (", self::w()->in("foo", $subSelect)->query());
-        $this->assertStringStartsWith("`foo` NOT IN (", self::w()->notIn("foo", $subSelect)->query());
+        $this->assertEquals("EXISTS ($subSelectText)", self::w()->exists($subSelect)->query());
+        $this->assertEquals("NOT EXISTS ($subSelectText)", self::w()->notExists($subSelect)->query());
+        $this->assertEquals("`foo` IN ($subSelectText)", self::w()->in("foo", $subSelect)->query());
+        $this->assertEquals("`foo` NOT IN ($subSelectText)", self::w()->notIn("foo", $subSelect)->query());
 
 
         $this->assertEquals("(foo='boo' or foo in null)", self::w()->orCond("foo=%s or foo in null", "boo")->query());
@@ -93,10 +93,9 @@ class WhereTest extends TestCase
         $this->assertEquals("`foo` NOT IN (1,2)", self::w()->orNotIn("foo", [1, 2])->query());
         $this->assertEquals("(`foo`=1)", self::w()->orSubWhere(self::w()->eq("foo", 1))->query());
         $this->assertEquals("(`foo`=1)", self::w()->orSubFn(fn(Where $sub) => $sub->eq("foo", 1))->query());
-        // TODO: change to "assertEquals" after select will be done
-        $this->assertStringStartsWith("EXISTS (", self::w()->orExists($subSelect)->query());
-        $this->assertStringStartsWith("NOT EXISTS (", self::w()->orNotExists($subSelect)->query());
-        $this->assertStringStartsWith("`foo` IN (", self::w()->orIn("foo", $subSelect)->query());
-        $this->assertStringStartsWith("`foo` NOT IN (", self::w()->orNotIn("foo", $subSelect)->query());
+        $this->assertEquals("EXISTS ($subSelectText)", self::w()->orExists($subSelect)->query());
+        $this->assertEquals("NOT EXISTS ($subSelectText)", self::w()->orNotExists($subSelect)->query());
+        $this->assertEquals("`foo` IN ($subSelectText)", self::w()->orIn("foo", $subSelect)->query());
+        $this->assertEquals("`foo` NOT IN ($subSelectText)", self::w()->orNotIn("foo", $subSelect)->query());
     }
 }

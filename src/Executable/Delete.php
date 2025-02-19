@@ -3,6 +3,7 @@
 namespace AP\Mysql\Executable;
 
 use AP\Mysql\Connect\ConnectInterface;
+use AP\Mysql\Helpers;
 use AP\Mysql\Statement\OrderBy;
 use AP\Mysql\Statement\Statement;
 use AP\Mysql\Statement\Where;
@@ -131,27 +132,12 @@ class Delete implements Statement, Executable
 
     public function query(): string
     {
-        $where_str = "";
-        if (is_array($this->where)) {
-            // A performance-focused, simplified version with an array-like structure for $where
-            // expected to be the most frequently used option
-            if (!empty($this->where)) {
-                $where = [];
-                foreach ($this->where as $k => $v) {
-                    $where[] = "(`$k`={$this->connect->escape($v)})";
-                }
-                $where_str = ' WHERE ' . implode(" AND ", $where);
-            }
-        } elseif ($this->where instanceof Where) {
-            $where_str = " WHERE {$this->where->query()}";
-        }
-
         return 'DELETE' .
             ($this->ignore ? ' IGNORE' : '') .
             " FROM `$this->table`" .
             (empty($this->table_alias) ? '' : " AS `$this->table_alias`") .
             (empty($this->partitions) ? '' : " PARTITION $this->partitions") .
-            $where_str .
+            Helpers::prepareWhere($this->connect, " WHERE", $this->where) .
             ($this->order instanceof OrderBy ? " ORDER BY {$this->order->query()}" : '') .
             (is_int($this->limit) ? " LIMIT $this->limit" : '');
     }

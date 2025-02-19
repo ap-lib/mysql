@@ -3,10 +3,11 @@
 namespace AP\Mysql;
 
 use AP\Mysql\Connect\ConnectInterface;
+use AP\Mysql\Statement\Where;
 use Generator;
 use UnexpectedValueException;
 
-class UpsertHelpers
+class Helpers
 {
     public static function prepareRow(ConnectInterface $connect, array $row): string
     {
@@ -118,5 +119,24 @@ class UpsertHelpers
         if ($blockNum > 0) {
             yield $query_begin . substr($all_values, 1) . $query_end;
         }
+    }
+
+    static public function prepareWhere(ConnectInterface $connect, string $command, Where|array|null $where)
+    {
+        if (is_array($where)) {
+            // A performance-focused, simplified version with an array-like structure for $where
+            // expected to be the most frequently used option
+            if (!empty($where)) {
+                $all = [];
+                foreach ($where as $k => $v) {
+                    $all[] = "`$k`={$connect->escape($v)}";
+                }
+                return "$command " . implode(" AND ", $all);
+            }
+        }
+        if ($where instanceof Where) {
+            return "$command {$where->query()}";
+        }
+        return "";
     }
 }

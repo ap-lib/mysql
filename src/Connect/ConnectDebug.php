@@ -9,6 +9,8 @@ use UnexpectedValueException;
 
 class ConnectDebug implements ConnectInterface
 {
+    use ConnectStatements;
+
     public function exec(string $query): mysqli_result|true
     {
         return true;

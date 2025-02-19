@@ -3,7 +3,7 @@
 namespace AP\Mysql\Executable;
 
 use AP\Mysql\Connect\ConnectInterface;
-use AP\Mysql\UpsertHelpers;
+use AP\Mysql\Helpers;
 use Generator;
 
 class InsertBulk implements Executable
@@ -75,11 +75,11 @@ class InsertBulk implements Executable
      */
     public function queries(): Generator
     {
-        yield from UpsertHelpers::bulkRunner(
+        yield from Helpers::bulkRunner(
             $this->connect,
             'INSERT',
             is_array($this->onDupKeyUpdate)
-                ? ' ' . UpsertHelpers::prepareOnDupKeyUpdate($this->connect, $this->onDupKeyUpdate)
+                ? ' ' . Helpers::prepareOnDupKeyUpdate($this->connect, $this->onDupKeyUpdate)
                 : '',
             $this->table,
             $this->rows,

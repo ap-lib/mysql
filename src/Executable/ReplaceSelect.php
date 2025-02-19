@@ -4,7 +4,7 @@ namespace AP\Mysql\Executable;
 
 use AP\Mysql\Connect\ConnectInterface;
 use AP\Mysql\Statement\Statement;
-use AP\Mysql\UpsertHelpers;
+use AP\Mysql\Helpers;
 
 class ReplaceSelect implements Statement, Executable
 {
@@ -47,7 +47,7 @@ class ReplaceSelect implements Statement, Executable
         return 'REPLACE ' .
             "`$this->table`" .
             ($this->partition ? " PARTITION ($this->partition)" : '') .
-            UpsertHelpers::prepareCols($this->connect, $this->cols) . ' ' .
+            Helpers::prepareCols($this->connect, $this->cols) . ' ' .
             $this->select->query();
     }
 

@@ -3,7 +3,7 @@
 namespace AP\Mysql\Executable;
 
 use AP\Mysql\Connect\ConnectInterface;
-use AP\Mysql\UpsertHelpers;
+use AP\Mysql\Helpers;
 use Generator;
 
 class ReplaceBulk implements Executable
@@ -61,7 +61,7 @@ class ReplaceBulk implements Executable
      */
     public function queries(): Generator
     {
-        yield from UpsertHelpers::bulkRunner(
+        yield from Helpers::bulkRunner(
             $this->connect,
             'REPLACE',
             '',
