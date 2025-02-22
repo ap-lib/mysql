@@ -162,21 +162,4 @@ class Connect implements ConnectInterface
     {
         return (int)$this->driver()->affected_rows;
     }
-
-    /**
-     * use it only if name no safe and getting outside
-     * if use it everywhere, it'll affect performance a lot
-     *
-     * @param string $name
-     * @return string
-     */
-    public function escapeName(string $name): string
-    {
-        if (str_contains($name, '..')
-            || !ctype_alnum(str_replace(['_', '.'], '', $name))
-        ) {
-            throw new UnexpectedValueException("Invalid format for name: $name");
-        }
-        return '`' . str_replace('.', '`.`', $name) . '`';
-    }
 }

@@ -7,7 +7,7 @@ use AP\Mysql\Statement\Where;
 use Generator;
 use UnexpectedValueException;
 
-class Helpers
+class Helper
 {
     public static function prepareRow(ConnectInterface $connect, array $row): string
     {
@@ -138,5 +138,22 @@ class Helpers
             return "$command {$where->query()}";
         }
         return "";
+    }
+
+    /**
+     * use it only if name no safe and getting outside
+     * if use it everywhere, it'll affect performance a lot
+     *
+     * @param string $name
+     * @return string
+     */
+    public function escapeName(string $name): string
+    {
+        if (str_contains($name, '..')
+            || !ctype_alnum(str_replace(['_', '.'], '', $name))
+        ) {
+            throw new UnexpectedValueException("Invalid format for name: $name");
+        }
+        return '`' . str_replace('.', '`.`', $name) . '`';
     }
 }

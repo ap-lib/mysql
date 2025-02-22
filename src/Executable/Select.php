@@ -3,7 +3,7 @@
 namespace AP\Mysql\Executable;
 
 use AP\Mysql\Connect\ConnectInterface;
-use AP\Mysql\Helpers;
+use AP\Mysql\Helper;
 use AP\Mysql\Raw;
 use AP\Mysql\Statement\GroupBy;
 use AP\Mysql\Statement\OrderBy;
@@ -87,12 +87,12 @@ class Select implements Statement, Executable
             (is_bool($this->sqlSmallResult) ? ($this->sqlSmallResult ? 'SQL_SMALL_RESULT ' : 'SQL_BIG_RESULT ') : '') .
             "{$this->buildColumns()} FROM " .
             (is_string($this->table) ? "`$this->table`" : $this->table->query()) .
-            Helpers::prepareWhere($this->connect, " WHERE", $this->where) .
+            Helper::prepareWhere($this->connect, " WHERE", $this->where) .
             (is_string($this->group)
                 ? " GROUP BY $this->group"
                 : ($this->group instanceof GroupBy ? " GROUP BY {$this->group->query()}" : '')
             ) .
-            Helpers::prepareWhere($this->connect, " HAVING", $this->having) .
+            Helper::prepareWhere($this->connect, " HAVING", $this->having) .
             // add WINDOW SPEC
             (is_string($this->order)
                 ? " ORDER BY $this->order"
