@@ -3,6 +3,7 @@
 namespace AP\Mysql;
 
 use AP\Mysql\Connect\ConnectInterface;
+use AP\Mysql\Executable\Select;
 use AP\Mysql\Statement\Where;
 use Generator;
 use UnexpectedValueException;
@@ -29,8 +30,11 @@ class Helper
         return 'ON DUPLICATE KEY UPDATE ' . substr($update_statement, 1);
     }
 
-    public static function prepareCols(ConnectInterface $connect, array $cols): string
+    public static function prepareCols(array $cols): string
     {
+        if (empty($cols)) {
+            return "";
+        }
         $names = "";
         foreach ($cols as $col) {
             $names .= ",`$col`";
@@ -147,7 +151,7 @@ class Helper
      * @param string $name
      * @return string
      */
-    public function escapeName(string $name): string
+    public static function escapeName(string $name): string
     {
         if (str_contains($name, '..')
             || !ctype_alnum(str_replace(['_', '.'], '', $name))

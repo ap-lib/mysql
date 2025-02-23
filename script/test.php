@@ -3,6 +3,7 @@
 
 use AP\Mysql\Connect\Connect;
 use AP\Mysql\Executable\InsertBulk;
+use AP\Mysql\Executable\Select;
 
 include __DIR__ . "/../vendor/autoload.php";;
 microtime(true);
@@ -15,24 +16,43 @@ $connect = new Connect(
 );
 $connect->driver();
 
-//$iter = 10000;
-//
-//
-//
-//
-//$start = microtime(true);
-//for ($i = 0; $i < $iter; $i++) {
-//    $connect->insert("test", ["id" => $i, "label" => "hello world"])->query();
-//}
-//echo sprintf("connect->insert()->query (late): %f\n", microtime(true) - $start);
-//
-//$start = microtime(true);
-//for ($i = 0; $i < $iter; $i++) {
-//    $connect->upsert->insert("test", ["id" => $i, "label" => "hello world"]);
-//}
-//echo sprintf("connect->upsert->indert: %f\n", microtime(true) - $start);
-//
-//die;
+$iter = 10000;
+
+
+
+for ($i = 0; $i < 1; $i++) {
+    (new Select($connect, "table", ["id", "label"]))
+        ->whereEq("id", 1)
+        ->query();
+}
+
+
+for ($i = 0; $i < 1; $i++) {
+    $connect->select("table", ["id", "label"])
+        ->whereEq("id", 1)
+        ->query();
+}
+
+
+
+$start = microtime(true);
+for ($i = 0; $i < $iter; $i++) {
+    (new Select($connect, "table", ["id", "label"]))
+        ->whereEq("id", 1)
+        ->query();
+}
+echo sprintf("select->whereEq: %f\n", microtime(true) - $start);
+
+$start = microtime(true);
+for ($i = 0; $i < $iter; $i++) {
+    $connect->select("table", ["id", "label"])
+        ->whereEq("id", 1)
+        ->query();
+}
+echo sprintf("select->whereEq: %f\n", microtime(true) - $start);
+
+
+die;
 
 // connect->upsert->insertBulk: 0.035291     2097152.000000     2097152.000000
 

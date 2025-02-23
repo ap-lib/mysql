@@ -5,54 +5,50 @@ namespace AP\Mysql\Executable;
 use AP\Mysql\Connect\ConnectInterface;
 use AP\Mysql\Helper;
 use AP\Mysql\Raw;
-use AP\Mysql\Statement\GroupBy;
-use AP\Mysql\Statement\OrderBy;
 use AP\Mysql\Statement\Statement;
 use AP\Mysql\Statement\TableFactor;
 use AP\Mysql\Statement\Where;
 use Closure;
 use mysqli_result;
+use UnexpectedValueException;
 
 /**
  * @see https://dev.mysql.com/doc/refman/8.4/en/select.html
+ *
+ * because into_option usually no use, it no included to this implementation
+ * to add "into_option" you can append it after get a select query like a string
  */
 class Select implements Statement, Executable
 {
-    private bool  $straightJoin   = false;
-    private ?bool $sqlSmallResult = null;
-
-    // TODO: add joins
-    // TODO: add window
+    private string $table;
+    private string $join           = "";
+    private string $window         = "";
+    private string $where          = "";
+    private string $having         = "";
+    private string $group          = "";
+    private string $order          = "";
+    private ?int   $limit          = null;
+    private ?int   $offset         = null;
+    private bool   $distinct       = false;
+    private bool   $straightJoin   = false;
+    private ?bool  $sqlSmallResult = null;
 
     /**
      * @param ConnectInterface $connect readonly, if you need to run this query on a different connection
-     *              you can run ```$DifferentConnection->exec($originalSelect->query())```
+     *              you can run a string query on another connection,
      *              but please make sure what charset is equal,
      *              otherwise it can follow to serious security problems
      *
      * @param string|TableFactor $table
      * @param array $columns
-     * @param Where|array|null $where
-     * @param Where|array|null $having
-     * @param GroupBy|string|null $group
-     * @param OrderBy|string|null $order
-     * @param int|null $limit
-     * @param int|null $offset
-     * @param bool $distinct
      */
     public function __construct(
         private readonly ConnectInterface $connect,
-        private string|TableFactor        $table,
+        string|TableFactor                $table,
         private array                     $columns = [],
-        private Where|array|null          $where = null,
-        private Where|array|null          $having = null,
-        private GroupBy|string|null       $group = null,
-        private OrderBy|string|null       $order = null,
-        private ?int                      $limit = null,
-        private ?int                      $offset = null,
-        private bool                      $distinct = false,
     )
     {
+        $this->table = is_string($table) ? "`$table`" : $table->query();
     }
 
     protected function buildColumns(): string
@@ -70,7 +66,7 @@ class Select implements Statement, Executable
             } elseif ($v instanceof Raw) {
                 $columns .= "{$v->escape($this->connect)}";
             } else {
-                throw new \UnexpectedValueException(
+                throw new UnexpectedValueException(
                     'Column value must be string, AP\Mysql\Executable\Select or AP\Mysql\Raw'
                 );
             }
@@ -86,18 +82,13 @@ class Select implements Statement, Executable
             ($this->straightJoin ? 'STRAIGHT_JOIN ' : '') .
             (is_bool($this->sqlSmallResult) ? ($this->sqlSmallResult ? 'SQL_SMALL_RESULT ' : 'SQL_BIG_RESULT ') : '') .
             "{$this->buildColumns()} FROM " .
-            (is_string($this->table) ? "`$this->table`" : $this->table->query()) .
-            Helper::prepareWhere($this->connect, " WHERE", $this->where) .
-            (is_string($this->group)
-                ? " GROUP BY $this->group"
-                : ($this->group instanceof GroupBy ? " GROUP BY {$this->group->query()}" : '')
-            ) .
-            Helper::prepareWhere($this->connect, " HAVING", $this->having) .
-            // add WINDOW SPEC
-            (is_string($this->order)
-                ? " ORDER BY $this->order"
-                : ($this->order instanceof OrderBy ? " ORDER BY {$this->order->query()}" : '')
-            ) .
+            $this->table .
+            $this->join .
+            (empty($this->where) ? '' : ' WHERE ' . substr($this->where, 5)) .
+            (empty($this->group) ? '' : ' GROUP BY ' . substr($this->group, 1)) .
+            (empty($this->having) ? '' : ' HAVING ' . substr($this->having, 5)) .
+            (empty($this->window) ? '' : " WINDOW $this->window") .
+            (empty($this->order) ? '' : ' ORDER BY ' . substr($this->order, 1)) .
             (is_int($this->limit) ? (" LIMIT $this->limit" . (is_int($this->offset) ? ",$this->offset" : '')) : '');
     }
 
@@ -110,7 +101,7 @@ class Select implements Statement, Executable
 
     public function setTable(string|TableFactor $table): static
     {
-        $this->table = $table;
+        $this->table = is_string($table) ? "`$table`" : $table->query();
         return $this;
     }
 
@@ -123,6 +114,12 @@ class Select implements Statement, Executable
     public function setLimit(?int $limit, ?int $offset = null): static
     {
         $this->limit  = $limit;
+        $this->offset = $offset;
+        return $this;
+    }
+
+    public function setOffset(?int $offset = null): static
+    {
         $this->offset = $offset;
         return $this;
     }
@@ -157,505 +154,1327 @@ class Select implements Statement, Executable
         return $this;
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    public function groupByObject(): GroupBy
+    public function setWindow(string $window): static
     {
-        if (is_null($this->group)) {
-            $this->group = new GroupBy();
-        } elseif (is_string($this->group)) {
-            $this->group = (new GroupBy)->expr($this->group);
-        }
-        return $this->group;
+        $this->window = $window;
+        return $this;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public function orderBy(): OrderBy
+    private function baseJoin(
+        string             $type,
+        string|TableFactor $table,
+        string|Raw|Where   $where,
+    ): static
     {
-        if (is_null($this->order)) {
-            $this->order = new OrderBy();
-        } elseif (is_string($this->order)) {
-            $this->order = (new OrderBy)->expr($this->order);
-        }
-        return $this->order;
+        $this->join .= " $type " .
+            (is_string($table) ? "`$table`" : $table->query()) .
+            (is_string($where)
+                ? " ON $where"
+                : Helper::prepareWhere($this->connect, ' ON', $where)
+            );
+
+        return $this;
+    }
+
+    public function joinInner(
+        string|TableFactor $table,
+        string|array|Where $where,
+    ): static
+    {
+        return $this->baseJoin('JOIN', $table, $where);
+    }
+
+    public function joinLeft(
+        string|TableFactor $table,
+        string|array|Where $where,
+        bool               $outer = false
+    ): static
+    {
+        return $this->baseJoin('LEFT ' . ($outer ? 'OUTER ' : '') . 'JOIN', $table, $where);
+    }
+
+    public function joinRight(
+        string|TableFactor $table,
+        string|array|Where $where,
+        bool               $outer = false
+    ): static
+    {
+        return $this->baseJoin('RIGHT ' . ($outer ? 'OUTER ' : '') . 'JOIN', $table, $where);
+    }
+
+    public function joinStraight(
+        string|TableFactor $table,
+        string|array|Where $where,
+    ): static
+    {
+        return $this->baseJoin('STRAIGHT_JOIN', $table, $where);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
     /**
-     * use it only if you want to add changes to where, because it always will convert to Where object
-     * it can reduce performance
+     * Adds a group condition to the "group by" clause
      *
-     * @return Where
+     * @param int|string $name The expression used for ordering
+     * @return $this
      */
-    public function getWhereObject(): Where
+    public function group(int|string $name): static
     {
-        if (is_null($this->where)) {
-            $this->where = new Where($this->connect);
-        } elseif (is_array($this->where)) {
-            $where = new Where($this->connect);
-            foreach ($this->where as $k => $v) {
-                $where->eq($k, $v);
-            }
-            $this->where = $where;
-        }
-        return $this->where;
+        $this->group .= is_string($name) ? ",`$name`" : ",$name";
+        return $this;
     }
 
+    /**
+     * Adds an expression-based group condition to the "group by" clause
+     *
+     * @param string $expr The expression used for ordering
+     * @return $this
+     */
+    public function groupExpr(string $expr): static
+    {
+        $this->group .= ",$expr";
+        return $this;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Adds an ascending order condition to the "order by" clause
+     *
+     * @param string|int $name The column name or index to order by. The name will be just wrapped in backticks
+     *                         Don't use raw user input directly to form column names.
+     *                         If ordered by an aliased column, write it as o`.`column to get `o`.`column`
+     * @return $this
+     */
+    public function order(string|int $name): static
+    {
+        $this->order .= is_string($name) ? ",`$name`" : ",$name";
+        return $this;
+    }
+
+    /**
+     * Adds a descending order condition to the "order by" clause
+     *
+     * @param string|int $name The column name or index to order by. The name will be just wrapped in backticks
+     *                         Don't use raw user input directly to form column names.
+     *                         If ordered by an aliased column, write it as o`.`column to get `o`.`column`
+     * @return $this
+     */
+    public function orderDesc(string|int $name): static
+    {
+        $this->order .= is_string($name) ? ",`$name` DESC" : ",$name DESC";
+        return $this;
+    }
+
+    /**
+     * Adds an expression-based ascending order condition to the "order by" clause
+     *
+     * @param string $expr The expression used for ordering
+     * @return $this
+     */
+    public function orderExpr(string $expr): static
+    {
+        $this->order .= ",$expr";
+        return $this;
+    }
+
+    /**
+     * Adds an expression-based descending order condition to the "order by" clause
+     *
+     * @param string $expr The expression used for ordering
+     * @return $this
+     */
+    public function orderExprDesc(string $expr): static
+    {
+        $this->order .= ",$expr DESC";
+        return $this;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Adds "And" a formatted condition to the "where" clause.
+     *
+     * @param string $condition The condition string, formatted using sprintf
+     * * @param mixed ...$values Values to be inserted into the condition
+     * *                         Each value will be properly escaped to ensure MySQL safety
+     * @return $this
+     */
     public function whereCond(string $condition, mixed ...$values): static
     {
-        $this->getWhereObject()->cond($condition, ...$values);
+        if (!empty($values)) {
+            foreach ($values as $k => &$v) {
+                $values[$k] = $this->connect->escape($v);
+            }
+            $this->where .= ' AND (' . sprintf($condition, ...$values) . ')';
+        } else {
+            $this->where .= " AND ($condition)";
+        }
         return $this;
     }
 
+    /**
+     * Adds "And" an equality condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value It'll be safety escaped
+     * @return $this
+     */
     public function whereEq(string $name, mixed $value): static
     {
-        $this->getWhereObject()->eq($name, $value);
+        $this->where .= " AND `$name`={$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a Not Equal condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function whereNotEq(string $name, mixed $value): static
     {
-        $this->getWhereObject()->notEq($name, $value);
+        $this->where .= " AND `$name`<>{$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a Greater than condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function whereGt(string $name, mixed $value): static
     {
-        $this->getWhereObject()->gt($name, $value);
+        $this->where .= " AND `$name`>{$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a Less than condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function whereLt(string $name, mixed $value): static
     {
-        $this->getWhereObject()->lt($name, $value);
+        $this->where .= " AND `$name`<{$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a Greater than OR Equal condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function whereGte(string $name, mixed $value): static
     {
-        $this->getWhereObject()->gte($name, $value);
+        $this->where .= " AND `$name`>={$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a Less than OR Equal condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function whereLte(string $name, mixed $value): static
     {
-        $this->getWhereObject()->lte($name, $value);
+        $this->where .= " AND `$name`<={$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a like condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to match. It'll be safely escaped
+     * @return $this
+     */
     public function whereLike(string $name, mixed $value): static
     {
-        $this->getWhereObject()->like($name, $value);
+        $this->where .= " AND `$name` LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a not like condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to match. It'll be safely escaped
+     * @return $this
+     */
     public function whereNotLike(string $name, mixed $value): static
     {
-        $this->getWhereObject()->notLike($name, $value);
+        $this->where .= " AND `$name` NOT LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" Is Null condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @return $this
+     */
     public function whereIsNull(string $name): static
     {
-        $this->getWhereObject()->isNull($name);
+        $this->where .= " AND `$name` IS NULL";
         return $this;
     }
 
+    /**
+     * Adds "And" Isn't Null condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @return $this
+     */
     public function whereIsNotNull(string $name): static
     {
-        $this->getWhereObject()->isNotNull($name);
+        $this->where .= " AND `$name` IS NOT NULL";
         return $this;
     }
 
+    /**
+     * Adds "And" a BETWEEN condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $start The starting value. It'll be safely escaped
+     * @param mixed $end The ending value. It'll be safely escaped
+     * @return $this
+     */
     public function whereBetween(string $name, mixed $start, mixed $end): static
     {
-        $this->getWhereObject()->between($name, $start, $end);
+        $this->where .= " AND `$name` BETWEEN {$this->connect->escape($start)} AND {$this->connect->escape($end)}";
         return $this;
     }
 
+    /**
+     * Adds "And" an IN condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param array|Select $list The list of values or a sub query. It'll be safely escaped
+     * @return $this
+     */
     public function whereIn(string $name, array|Select $list): static
     {
-        $this->getWhereObject()->in($name, $list);
+        if (is_array($list)) {
+            foreach ($list as $k => $v) {
+                $list[$k] = $this->connect->escape($v);
+            }
+            $list = '(' . implode(',', $list) . ')';
+        } else {
+            $list = "({$list->query()})";
+        }
+
+        $this->where .= " AND `$name` IN $list";
         return $this;
     }
 
+    /**
+     * Adds "And" a not IN condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param array|Select $list The list of values or a sub query. It'll be safely escaped
+     * @return $this
+     */
     public function whereNotIn(string $name, array|Select $list): static
     {
-        $this->getWhereObject()->notIn($name, $list);
+        if (is_array($list)) {
+            foreach ($list as $k => $v) {
+                $list[$k] = $this->connect->escape($v);
+            }
+            $list = '(' . implode(',', $list) . ')';
+        } else {
+            $list = "({$list->query()})";
+        }
+
+        $this->where .= " AND `$name` NOT IN $list";
         return $this;
     }
 
+    /**
+     * Adds "And" an EXISTS condition to the "where" clause
+     *
+     * @param Select $select The sub query to check for existence
+     * @return $this
+     */
     public function whereExists(Select $select): static
     {
-        $this->getWhereObject()->exists($select);
+        $this->where .= " AND EXISTS ({$select->query()})";
         return $this;
     }
 
+    /**
+     * Adds "And" a not EXISTS condition to the "where" clause
+     *
+     * @param Select $select The sub query to check for non-existence
+     * @return $this
+     */
     public function whereNotExists(Select $select): static
     {
-        $this->getWhereObject()->notExists($select);
+        $this->where .= " AND NOT EXISTS ({$select->query()})";
         return $this;
     }
 
+    /**
+     * Adds "And" a sub query condition to the "where" clause
+     *
+     * @param Where $where The sub query condition
+     * @return $this
+     */
     public function whereSubWhere(Where $where): static
     {
-        $this->getWhereObject()->subWhere($where);
+        $this->where .= " AND ({$where->query()})";
         return $this;
     }
 
+    /**
+     * Adds "And" a sub query condition using a closure
+     * less performs then whereSubWhere
+     *
+     * @param Closure $sub The closure that generates a Where object
+     * @return $this
+     */
     public function whereSubFn(Closure $sub): static
     {
-        $this->getWhereObject()->subFn($sub);
+        $this->where .= ' AND (' . $sub(new Where($this->connect))->query() . ')';
         return $this;
     }
 
+    /**
+     * Adds OR a formatted condition to the "where" clause.
+     *
+     * @param string $condition The condition string, formatted using sprintf
+     * @param mixed ...$values Values to be inserted into the condition
+     *                         Each value will be properly escaped to ensure MySQL safety
+     * @return $this
+     */
     public function orWhereCond(string $condition, mixed ...$values): static
     {
-        $this->getWhereObject()->orCond($condition, ...$values);
+        if (!empty($values)) {
+            foreach ($values as $k => &$v) {
+                $values[$k] = $this->connect->escape($v);
+            }
+            $this->where .= ' OR  (' . sprintf($condition, ...$values) . ')';
+        } else {
+            $this->where .= " OR  ($condition)";
+        }
         return $this;
     }
 
+    /**
+     * Adds OR an equality condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value It'll be safety escaped
+     * @return $this
+     */
     public function orWhereEq(string $name, mixed $value): static
     {
-        $this->getWhereObject()->orEq($name, $value);
+        $this->where .= " OR  `$name`={$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a Not Equal condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function orWhereNotEq(string $name, mixed $value): static
     {
-        $this->getWhereObject()->orNotEq($name, $value);
+        $this->where .= " OR  `$name`<>{$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a Greater than condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function orWhereGt(string $name, mixed $value): static
     {
-        $this->getWhereObject()->orGt($name, $value);
+        $this->where .= " OR  `$name`>{$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a Less than condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function orWhereLt(string $name, mixed $value): static
     {
-        $this->getWhereObject()->orLt($name, $value);
+        $this->where .= " OR  `$name`<{$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a Greater than OR Equal condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function orWhereGte(string $name, mixed $value): static
     {
-        $this->getWhereObject()->orGte($name, $value);
+        $this->where .= " OR  `$name`>={$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a Less than OR Equal condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function orWhereLte(string $name, mixed $value): static
     {
-        $this->getWhereObject()->orLte($name, $value);
+        $this->where .= " OR  `$name`<={$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a like condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to match. It'll be safely escaped
+     * @return $this
+     */
     public function orWhereLike(string $name, mixed $value): static
     {
-        $this->getWhereObject()->orLike($name, $value);
+        $this->where .= " OR  `$name` LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a not like condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to match. It'll be safely escaped
+     * @return $this
+     */
     public function orWhereNotLike(string $name, mixed $value): static
     {
-        $this->getWhereObject()->orNotLike($name, $value);
+        $this->where .= " OR  `$name` NOT LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR an Is Null condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @return $this
+     */
     public function orWhereIsNull(string $name): static
     {
-        $this->getWhereObject()->orIsNull($name);
+        $this->where .= " OR  `$name` IS NULL";
         return $this;
     }
 
+    /**
+     * Adds OR an Isn't Null condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @return $this
+     */
     public function orWhereIsNotNull(string $name): static
     {
-        $this->getWhereObject()->orIsNotNull($name);
+        $this->where .= " OR  `$name` IS NOT NULL";
         return $this;
     }
 
+    /**
+     * Adds OR a BETWEEN condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $start The starting value. It'll be safely escaped
+     * @param mixed $end The ending value. It'll be safely escaped
+     * @return $this
+     */
     public function orWhereBetween(string $name, mixed $start, mixed $end): static
     {
-        $this->getWhereObject()->orBetween($name, $start, $end);
+        $this->where .= " OR  `$name` BETWEEN {$this->connect->escape($start)} AND {$this->connect->escape($end)}";
         return $this;
     }
 
+    /**
+     * Adds OR an IN condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param array|Select $list The list of values or a sub query. It'll be safely escaped
+     * @return $this
+     */
     public function orWhereIn(string $name, array|Select $list): static
     {
-        $this->getWhereObject()->orIn($name, $list);
+        if (is_array($list)) {
+            foreach ($list as $k => $v) {
+                $list[$k] = $this->connect->escape($v);
+            }
+            $list = '(' . implode(',', $list) . ')';
+        } else {
+            $list = "({$list->query()})";
+        }
+
+        $this->where .= " OR  `$name` IN $list";
         return $this;
     }
 
+    /**
+     * Adds OR a not IN condition to the "where" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param array|Select $list The list of values or a sub query. It'll be safely escaped
+     * @return $this
+     */
     public function orWhereNotIn(string $name, array|Select $list): static
     {
-        $this->getWhereObject()->orNotIn($name, $list);
+        if (is_array($list)) {
+            foreach ($list as $k => $v) {
+                $list[$k] = $this->connect->escape($v);
+            }
+            $list = '(' . implode(',', $list) . ')';
+        } else {
+            $list = "({$list->query()})";
+        }
+
+        $this->where .= " OR  `$name` NOT IN $list";
         return $this;
     }
 
+    /**
+     * Adds OR an EXISTS condition to the "where" clause
+     *
+     * @param Select $select The sub query to check for existence
+     * @return $this
+     */
     public function orWhereExists(Select $select): static
     {
-        $this->getWhereObject()->orExists($select);
+        $this->where .= " OR  EXISTS ({$select->query()})";
         return $this;
     }
 
+    /**
+     * Adds OR a not EXISTS condition to the "where" clause
+     *
+     * @param Select $select The sub query to check for non-existence
+     * @return $this
+     */
     public function orWhereNotExists(Select $select): static
     {
-        $this->getWhereObject()->orNotExists($select);
+        $this->where .= " OR  NOT EXISTS ({$select->query()})";
         return $this;
     }
 
+    /**
+     * Adds OR a sub query condition to the "where" clause
+     *
+     * @param Where $where The sub query condition
+     * @return $this
+     */
     public function orWhereSubWhere(Where $where): static
     {
-        $this->getWhereObject()->orSubWhere($where);
+        $this->where .= " OR  ({$where->query()})";
         return $this;
     }
 
+    /**
+     * Adds OR a sub query condition using a closure
+     * less performs then whereSubWhere
+     *
+     * @param Closure $sub The closure that generates a Where object
+     * @return $this
+     */
     public function orWhereSubFn(Closure $sub): static
     {
-        $this->getWhereObject()->orSubFn($sub);
+        $this->where .= ' OR  (' . $sub(new Where($this->connect))->query() . ')';
         return $this;
     }
-
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
-     * use it only if you want to add changes to where, because it always will convert to Where object
-     * it can reduce performance
+     * Adds "And" a formatted condition to the "having" clause.
      *
-     * @return Where
+     * @param string $condition The condition string, formatted using sprintf
+     * * @param mixed ...$values Values to be inserted into the condition
+     * *                         Each value will be properly escaped to ensure MySQL safety
+     * @return $this
      */
-    public function getHavingObject(): Where
-    {
-        if (is_null($this->having)) {
-            $this->having = new Where($this->connect);
-        } elseif (is_array($this->having)) {
-            $where = new Where($this->connect);
-            foreach ($this->having as $k => $v) {
-                $where->eq($k, $v);
-            }
-            $this->having = $where;
-        }
-        return $this->having;
-    }
-
     public function havingCond(string $condition, mixed ...$values): static
     {
-        $this->getHavingObject()->cond($condition, ...$values);
+        if (!empty($values)) {
+            foreach ($values as $k => &$v) {
+                $values[$k] = $this->connect->escape($v);
+            }
+            $this->having .= ' AND (' . sprintf($condition, ...$values) . ')';
+        } else {
+            $this->having .= " AND ($condition)";
+        }
         return $this;
     }
 
+    /**
+     * Adds "And" an equality condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value It'll be safety escaped
+     * @return $this
+     */
     public function havingEq(string $name, mixed $value): static
     {
-        $this->getHavingObject()->eq($name, $value);
+        $this->having .= " AND `$name`={$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a Not Equal condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function havingNotEq(string $name, mixed $value): static
     {
-        $this->getHavingObject()->notEq($name, $value);
+        $this->having .= " AND `$name`<>{$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a Greater than condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function havingGt(string $name, mixed $value): static
     {
-        $this->getHavingObject()->gt($name, $value);
+        $this->having .= " AND `$name`>{$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a Less than condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function havingLt(string $name, mixed $value): static
     {
-        $this->getHavingObject()->lt($name, $value);
+        $this->having .= " AND `$name`<{$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a Greater than OR Equal condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function havingGte(string $name, mixed $value): static
     {
-        $this->getHavingObject()->gte($name, $value);
+        $this->having .= " AND `$name`>={$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a Less than OR Equal condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function havingLte(string $name, mixed $value): static
     {
-        $this->getHavingObject()->lte($name, $value);
+        $this->having .= " AND `$name`<={$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a like condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to match. It'll be safely escaped
+     * @return $this
+     */
     public function havingLike(string $name, mixed $value): static
     {
-        $this->getHavingObject()->like($name, $value);
+        $this->having .= " AND `$name` LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" a not like condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to match. It'll be safely escaped
+     * @return $this
+     */
     public function havingNotLike(string $name, mixed $value): static
     {
-        $this->getHavingObject()->notLike($name, $value);
+        $this->having .= " AND `$name` NOT LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds "And" Is Null condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @return $this
+     */
     public function havingIsNull(string $name): static
     {
-        $this->getHavingObject()->isNull($name);
+        $this->having .= " AND `$name` IS NULL";
         return $this;
     }
 
+    /**
+     * Adds "And" Isn't Null condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @return $this
+     */
     public function havingIsNotNull(string $name): static
     {
-        $this->getHavingObject()->isNotNull($name);
+        $this->having .= " AND `$name` IS NOT NULL";
         return $this;
     }
 
+    /**
+     * Adds "And" a BETWEEN condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $start The starting value. It'll be safely escaped
+     * @param mixed $end The ending value. It'll be safely escaped
+     * @return $this
+     */
     public function havingBetween(string $name, mixed $start, mixed $end): static
     {
-        $this->getHavingObject()->between($name, $start, $end);
+        $this->having .= " AND `$name` BETWEEN {$this->connect->escape($start)} AND {$this->connect->escape($end)}";
         return $this;
     }
 
+    /**
+     * Adds "And" an IN condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param array|Select $list The list of values or a sub query. It'll be safely escaped
+     * @return $this
+     */
     public function havingIn(string $name, array|Select $list): static
     {
-        $this->getHavingObject()->in($name, $list);
+        if (is_array($list)) {
+            foreach ($list as $k => $v) {
+                $list[$k] = $this->connect->escape($v);
+            }
+            $list = '(' . implode(',', $list) . ')';
+        } else {
+            $list = "({$list->query()})";
+        }
+
+        $this->having .= " AND `$name` IN $list";
         return $this;
     }
 
+    /**
+     * Adds "And" a not IN condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param array|Select $list The list of values or a sub query. It'll be safely escaped
+     * @return $this
+     */
     public function havingNotIn(string $name, array|Select $list): static
     {
-        $this->getHavingObject()->notIn($name, $list);
+        if (is_array($list)) {
+            foreach ($list as $k => $v) {
+                $list[$k] = $this->connect->escape($v);
+            }
+            $list = '(' . implode(',', $list) . ')';
+        } else {
+            $list = "({$list->query()})";
+        }
+
+        $this->having .= " AND `$name` NOT IN $list";
         return $this;
     }
 
+    /**
+     * Adds "And" an EXISTS condition to the "having" clause
+     *
+     * @param Select $select The sub query to check for existence
+     * @return $this
+     */
     public function havingExists(Select $select): static
     {
-        $this->getHavingObject()->exists($select);
+        $this->having .= " AND EXISTS ({$select->query()})";
         return $this;
     }
 
+    /**
+     * Adds "And" a not EXISTS condition to the "having" clause
+     *
+     * @param Select $select The sub query to check for non-existence
+     * @return $this
+     */
     public function havingNotExists(Select $select): static
     {
-        $this->getHavingObject()->notExists($select);
+        $this->having .= " AND NOT EXISTS ({$select->query()})";
         return $this;
     }
 
+    /**
+     * Adds "And" a sub query condition to the "having" clause
+     *
+     * @param Where $where The sub query condition
+     * @return $this
+     */
     public function havingSubWhere(Where $where): static
     {
-        $this->getHavingObject()->subWhere($where);
+        $this->having .= " AND ({$where->query()})";
         return $this;
     }
 
+    /**
+     * Adds "And" a sub query condition using a closure
+     * less performs then whereSubWhere
+     *
+     * @param Closure $sub The closure that generates a Where object
+     * @return $this
+     */
     public function havingSubFn(Closure $sub): static
     {
-        $this->getHavingObject()->subFn($sub);
+        $this->having .= ' AND (' . $sub(new Where($this->connect))->query() . ')';
         return $this;
     }
 
+    /**
+     * Adds OR a formatted condition to the "having" clause.
+     *
+     * @param string $condition The condition string, formatted using sprintf
+     * @param mixed ...$values Values to be inserted into the condition
+     *                         Each value will be properly escaped to ensure MySQL safety
+     * @return $this
+     */
     public function orHavingCond(string $condition, mixed ...$values): static
     {
-        $this->getHavingObject()->orCond($condition, ...$values);
+        if (!empty($values)) {
+            foreach ($values as $k => &$v) {
+                $values[$k] = $this->connect->escape($v);
+            }
+            $this->having .= ' OR  (' . sprintf($condition, ...$values) . ')';
+        } else {
+            $this->having .= " OR  ($condition)";
+        }
         return $this;
     }
 
+    /**
+     * Adds OR an equality condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value It'll be safety escaped
+     * @return $this
+     */
     public function orHavingEq(string $name, mixed $value): static
     {
-        $this->getHavingObject()->orEq($name, $value);
+        $this->having .= " OR  `$name`={$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a Not Equal condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function orHavingNotEq(string $name, mixed $value): static
     {
-        $this->getHavingObject()->orNotEq($name, $value);
+        $this->having .= " OR  `$name`<>{$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a Greater than condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function orHavingGt(string $name, mixed $value): static
     {
-        $this->getHavingObject()->orGt($name, $value);
+        $this->having .= " OR  `$name`>{$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a Less than condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function orHavingLt(string $name, mixed $value): static
     {
-        $this->getHavingObject()->orLt($name, $value);
+        $this->having .= " OR  `$name`<{$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a Greater than OR Equal condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function orHavingGte(string $name, mixed $value): static
     {
-        $this->getHavingObject()->orGte($name, $value);
+        $this->having .= " OR  `$name`>={$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a Less than OR Equal condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to compare. It'll be safely escaped
+     * @return $this
+     */
     public function orHavingLte(string $name, mixed $value): static
     {
-        $this->getHavingObject()->orLte($name, $value);
+        $this->having .= " OR  `$name`<={$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a like condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to match. It'll be safely escaped
+     * @return $this
+     */
     public function orHavingLike(string $name, mixed $value): static
     {
-        $this->getHavingObject()->orLike($name, $value);
+        $this->having .= " OR  `$name` LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR a not like condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $value The value to match. It'll be safely escaped
+     * @return $this
+     */
     public function orHavingNotLike(string $name, mixed $value): static
     {
-        $this->getHavingObject()->orNotLike($name, $value);
+        $this->having .= " OR  `$name` NOT LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
+    /**
+     * Adds OR an Is Null condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @return $this
+     */
     public function orHavingIsNull(string $name): static
     {
-        $this->getHavingObject()->orIsNull($name);
+        $this->having .= " OR  `$name` IS NULL";
         return $this;
     }
 
+    /**
+     * Adds OR an Isn't Null condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @return $this
+     */
     public function orHavingIsNotNull(string $name): static
     {
-        $this->getHavingObject()->orIsNotNull($name);
+        $this->having .= " OR  `$name` IS NOT NULL";
         return $this;
     }
 
+    /**
+     * Adds OR a BETWEEN condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param mixed $start The starting value. It'll be safely escaped
+     * @param mixed $end The ending value. It'll be safely escaped
+     * @return $this
+     */
     public function orHavingBetween(string $name, mixed $start, mixed $end): static
     {
-        $this->getHavingObject()->orBetween($name, $start, $end);
+        $this->having .= " OR  `$name` BETWEEN {$this->connect->escape($start)} AND {$this->connect->escape($end)}";
         return $this;
     }
 
+    /**
+     * Adds OR an IN condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param array|Select $list The list of values or a sub query. It'll be safely escaped
+     * @return $this
+     */
     public function orHavingIn(string $name, array|Select $list): static
     {
-        $this->getHavingObject()->orIn($name, $list);
+        if (is_array($list)) {
+            foreach ($list as $k => $v) {
+                $list[$k] = $this->connect->escape($v);
+            }
+            $list = '(' . implode(',', $list) . ')';
+        } else {
+            $list = "({$list->query()})";
+        }
+
+        $this->having .= " OR  `$name` IN $list";
         return $this;
     }
 
+    /**
+     * Adds OR a not IN condition to the "having" clause
+     *
+     * @param string $name The column name. Don't use raw user input to form the column name
+     *                     As it's unsafe for performance reasons
+     *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
+     *                     If using a table or alias, write it as o`.`column to get `o`.`column`
+     * @param array|Select $list The list of values or a sub query. It'll be safely escaped
+     * @return $this
+     */
     public function orHavingNotIn(string $name, array|Select $list): static
     {
-        $this->getHavingObject()->orNotIn($name, $list);
+        if (is_array($list)) {
+            foreach ($list as $k => $v) {
+                $list[$k] = $this->connect->escape($v);
+            }
+            $list = '(' . implode(',', $list) . ')';
+        } else {
+            $list = "({$list->query()})";
+        }
+
+        $this->having .= " OR  `$name` NOT IN $list";
         return $this;
     }
 
+    /**
+     * Adds OR an EXISTS condition to the "having" clause
+     *
+     * @param Select $select The sub query to check for existence
+     * @return $this
+     */
     public function orHavingExists(Select $select): static
     {
-        $this->getHavingObject()->orExists($select);
+        $this->having .= " OR  EXISTS ({$select->query()})";
         return $this;
     }
 
+    /**
+     * Adds OR a not EXISTS condition to the "having" clause
+     *
+     * @param Select $select The sub query to check for non-existence
+     * @return $this
+     */
     public function orHavingNotExists(Select $select): static
     {
-        $this->getHavingObject()->orNotExists($select);
+        $this->having .= " OR  NOT EXISTS ({$select->query()})";
         return $this;
     }
 
+    /**
+     * Adds OR a sub query condition to the "having" clause
+     *
+     * @param Where $where The sub query condition
+     * @return $this
+     */
     public function orHavingSubWhere(Where $where): static
     {
-        $this->getHavingObject()->orSubWhere($where);
+        $this->having .= " OR  ({$where->query()})";
         return $this;
     }
 
+    /**
+     * Adds OR a sub query condition using a closure
+     * less performs then whereSubWhere
+     *
+     * @param Closure $sub The closure that generates a Where object
+     * @return $this
+     */
     public function orHavingSubFn(Closure $sub): static
     {
-        $this->getHavingObject()->orSubFn($sub);
+        $this->having .= ' OR  (' . $sub(new Where($this->connect))->query() . ')';
         return $this;
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }

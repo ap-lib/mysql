@@ -14,7 +14,7 @@ class GroupBy implements Statement
 
     public function expr(string $expr): static
     {
-        $this->group .= ", $expr";
+        $this->group .= ",$expr";
         return $this;
     }
 

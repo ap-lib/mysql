@@ -52,7 +52,7 @@ class InsertSelect implements Statement, Executable
         private readonly ConnectInterface $connect,
         protected string                  $table,
         protected Select                  $select,
-        protected array                   $cols, // TODO: can be optional if 100% same with select->colsNames
+        protected array                   $cols = [],
         protected bool                    $ignore = false,
         protected ?array                  $onDupKeyUpdate = null,
         protected string                  $partition = "",
@@ -125,6 +125,18 @@ class InsertSelect implements Statement, Executable
     }
 
     /**
+     * Sets the ON DUPLICATE KEY UPDATE values
+     *
+     * @param array|null $onDupKeyUpdate An associative array of column => value for updating on duplicate keys
+     * @return $this
+     */
+    public function setOnDupKeyUpdate(?array $onDupKeyUpdate): static
+    {
+        $this->onDupKeyUpdate = $onDupKeyUpdate;
+        return $this;
+    }
+
+    /**
      * Builds and returns the final INSERT SELECT query string
      *
      * @return string The constructed SQL query
@@ -132,10 +144,10 @@ class InsertSelect implements Statement, Executable
     public function query(): string
     {
         return 'INSERT ' .
-            ($this->ignore ? ' IGNORE' : '') .
+            ($this->ignore ? 'IGNORE ' : '') .
             "`$this->table`" .
             ($this->partition ? " PARTITION ($this->partition)" : '') .
-            Helper::prepareCols($this->connect, $this->cols) . ' ' .
+            Helper::prepareCols($this->cols, $this->select) . ' ' .
             $this->select->query() .
             (!empty($this->onDupKeyUpdate)
                 ? ' ' . Helper::prepareOnDupKeyUpdate($this->connect, $this->onDupKeyUpdate)

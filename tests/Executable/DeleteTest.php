@@ -49,7 +49,8 @@ class DeleteTest extends TestCase
 
     public function testWhereMapping(): void
     {
-        $subSelect     = new Select(new ConnectDebug(), "subtable", ["id"], ["name" => "Yuri"]);
+        $subSelect     = (new Select(new ConnectDebug(), "subtable", ["id"]))
+            ->whereEq("name", "Yuri");
         $subSelectText = $subSelect->query();
 
         $ds = "DELETE FROM `tbl` WHERE";

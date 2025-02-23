@@ -10,10 +10,7 @@ use AP\Mysql\Executable\Replace;
 use AP\Mysql\Executable\ReplaceBulk;
 use AP\Mysql\Executable\ReplaceSelect;
 use AP\Mysql\Executable\Select;
-use AP\Mysql\Statement\GroupBy;
-use AP\Mysql\Statement\OrderBy;
 use AP\Mysql\Statement\TableFactor;
-use AP\Mysql\Statement\Where;
 
 trait ConnectStatements
 {
@@ -112,30 +109,12 @@ trait ConnectStatements
     public function select(
         string|TableFactor $table,
         array              $columns = [],
-        Where|array|null   $where = null,
-        Where|array|null   $having = null,
-        ?GroupBy           $group = null,
-        ?OrderBy           $order = null,
-        ?int               $limit = null,
-        ?int               $offset = null,
-        bool               $distinct = false,
-        bool               $straightJoin = false,
-        ?bool              $sqlSmallResult = null,
-    )
+    ): Select
     {
         return new Select(
             $this,
             $table,
             $columns,
-            $where,
-            $having,
-            $group,
-            $order,
-            $limit,
-            $offset,
-            $distinct,
-            $straightJoin,
-            $sqlSmallResult,
         );
     }
 

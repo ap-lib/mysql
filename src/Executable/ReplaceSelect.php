@@ -3,8 +3,8 @@
 namespace AP\Mysql\Executable;
 
 use AP\Mysql\Connect\ConnectInterface;
-use AP\Mysql\Statement\Statement;
 use AP\Mysql\Helper;
+use AP\Mysql\Statement\Statement;
 
 /**
  * Represents a REPLACE ... SELECT SQL statement
@@ -43,7 +43,7 @@ class ReplaceSelect implements Statement, Executable
         private readonly ConnectInterface $connect,
         protected string                  $table,
         protected Select                  $select,
-        protected array                   $cols, // TODO: can be optional if 100% same with select->colsNames
+        protected array                   $cols = [],
         protected string                  $partition = "",
     )
     {
@@ -111,7 +111,7 @@ class ReplaceSelect implements Statement, Executable
         return 'REPLACE ' .
             "`$this->table`" .
             ($this->partition ? " PARTITION ($this->partition)" : '') .
-            Helper::prepareCols($this->connect, $this->cols) . ' ' .
+            Helper::prepareCols($this->cols) . ' ' .
             $this->select->query();
     }
 
