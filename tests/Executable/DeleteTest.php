@@ -5,7 +5,6 @@ namespace AP\Mysql\Tests\Executable;
 use AP\Mysql\Connect\ConnectDebug;
 use AP\Mysql\Executable\Delete;
 use AP\Mysql\Executable\Select;
-use AP\Mysql\Statement\OrderBy;
 use AP\Mysql\Statement\Where;
 use PHPUnit\Framework\TestCase;
 
@@ -13,17 +12,11 @@ class DeleteTest extends TestCase
 {
     static public function d(
         string              $table,
-        Where|array|null    $where = null,
-        OrderBy|string|null $order = null,
-        ?int                $limit = null,
     ): Delete
     {
         return new Delete(
             new ConnectDebug(),
             $table,
-            $where,
-            $order,
-            $limit
         );
     }
 
@@ -34,7 +27,8 @@ class DeleteTest extends TestCase
 
     public function testBasicSelect(): void
     {
-        $ds = "DELETE FROM `table`";
+        $ds = /** @lang text */
+            "DELETE FROM `table`";
 
         $this->assertEquals("$ds", self::d("table")->query());
         $this->assertEquals("$ds PARTITION (p1, p2)", self::d("table")->setPartitions("p1, p2")->query());
@@ -47,13 +41,14 @@ class DeleteTest extends TestCase
         $this->assertEquals("$ds LIMIT -10", self::d("table")->setLimit(-10)->query());
     }
 
-    public function testWhereMapping(): void
+    public function testWhere(): void
     {
         $subSelect     = (new Select(new ConnectDebug(), "subtable", ["id"]))
             ->whereEq("name", "Yuri");
         $subSelectText = $subSelect->query();
 
-        $ds = "DELETE FROM `tbl` WHERE";
+        $ds = /** @lang text */
+            "DELETE FROM `tbl` WHERE";
 
         $this->assertEquals("$ds (foo='boo' or foo in null)", self::d("tbl")->whereCond("foo=%s or foo in null", "boo")->query());
         $this->assertEquals("$ds (foo=1 or foo in null)", self::d("tbl")->whereCond("foo=%s or foo in null", 1)->query());
@@ -103,7 +98,8 @@ class DeleteTest extends TestCase
 
     public function testOrderingMapping(): void
     {
-        $ds = "DELETE FROM `table` ORDER BY";
+        $ds = /** @lang text */
+            "DELETE FROM `table` ORDER BY";
 
         $this->assertEquals("$ds `name`", self::d("table")->order("name")->query());
         $this->assertEquals("$ds `age` DESC", self::d("table")->orderDesc("age")->query());
@@ -113,15 +109,18 @@ class DeleteTest extends TestCase
 
     public function testFullDeleteQuery(): void
     {
-        $subSelect = new Select(new ConnectDebug(), "users", ["id"], ["status" => "inactive"]);
+        $subSelect = (new Select(new ConnectDebug(), "users", ["id"]))
+            ->whereEq("status", "active");
 
-        $expectedQuery = "DELETE FROM `orders` AS `o` PARTITION (p1, p2) " .
+        $expectedQuery = /** @lang text */
+            "DELETE IGNORE FROM `orders_arch` AS `o` PARTITION (p1, p2) " .
             "WHERE `status`='pending' AND `o`.`amount`>100 " .
             "AND EXISTS (" . $subSelect->query() . ") " .
             "ORDER BY `o`.`created_at` DESC,LENGTH(`o`.`reference`) " .
             "LIMIT 50";
 
         $query = self::d("orders")
+            ->setIgnore()
             ->setTableAlias("o")
             ->setPartitions("p1, p2")
             ->whereEq("status", "pending")
@@ -130,6 +129,7 @@ class DeleteTest extends TestCase
             ->orderDesc("o`.`created_at") // Because column names are wrapped in ``, to get `o`.`created_at` you need to write it as o`.`created_at
             ->orderExpr("LENGTH(`o`.`reference`)")
             ->setLimit(50)
+            ->setTable("orders_arch")
             ->query();
 
         $this->assertEquals($expectedQuery, $query);

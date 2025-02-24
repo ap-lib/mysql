@@ -1,6 +1,6 @@
 {
   "name": "ap-lib/mysql",
-  "description": "",
+  "description": "AP\\Mysql is a performance-oriented query builder built exclusively for MySQL. It leverages MySQL-specific features like INSERT IGNORE, REPLACE, ON DUPLICATE KEY UPDATE, partitions, and bulk operations for maximum efficiency",
   "type": "library",
   "homepage": "https://github.com/ap-lib/mysql",
   "license": "MIT",

@@ -10,21 +10,19 @@ use AP\Mysql\Executable\Replace;
 use AP\Mysql\Executable\ReplaceBulk;
 use AP\Mysql\Executable\ReplaceSelect;
 use AP\Mysql\Executable\Select;
+use AP\Mysql\Executable\Update;
 use AP\Mysql\Statement\TableFactor;
+use AP\Mysql\Statement\Where;
 
 trait ConnectStatements
 {
     public function delete(
-        string $table,
-        ?array $where = null,
-        ?int   $limit = null
+        string $table
     ): Delete
     {
         return new Delete(
             $this,
-            $table,
-            $where,
-            $limit
+            $table
         );
     }
 
@@ -43,7 +41,7 @@ trait ConnectStatements
     public function insertSelect(
         string $table,
         Select $select,
-        array  $cols
+        array  $cols = []
     ): InsertSelect
     {
         return new InsertSelect(
@@ -118,23 +116,16 @@ trait ConnectStatements
         );
     }
 
-    public function update(
-        string $table,
-        array  $assignment,
-               $where_condition,
-               $order_by = null,
-        bool   $ignore = false,
-    )
+    public function update(string $table): Update
     {
-
+        return new Update(
+            $this,
+            $table,
+        );
     }
 
-
-    public function call(
-        string $name,
-        array  $parameters,
-    )
+    public function where(): Where
     {
-
+        return new Where($this);
     }
 }

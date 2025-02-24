@@ -3,8 +3,8 @@
 namespace AP\Mysql\Executable;
 
 use AP\Mysql\Connect\ConnectInterface;
-use AP\Mysql\Statement\Statement;
 use AP\Mysql\Helper;
+use AP\Mysql\Statement\Statement;
 
 /**
  * Represents an INSERT ... SELECT SQL statement
@@ -25,6 +25,25 @@ use AP\Mysql\Helper;
 class InsertSelect implements Statement, Executable
 {
     /**
+     * @var bool $ignore Whether to use IGNORE, preventing errors on duplicate entries
+     */
+    private bool $ignore = false;
+
+    /**
+     * @var array|null $onDupKeyUpdate Data for ON DUPLICATE KEY UPDATE.
+     *                                 Should be an associative array of column => value
+     *                                 The values (data) will be properly encoded and safe
+     *                                 Don't use raw user input to form the column name
+     *                                 If needed, use AP\Mysql\Helpers::escapeName() to sanitize it
+     */
+    private ?array $onDupKeyUpdate = null;
+
+    /**
+     * @var string $partition The partition to insert into. Don't use raw user input
+     */
+    private string $partition = "";
+
+    /**
      * @param ConnectInterface $connect The database connection instance
      *
      * @param string $table The table name. Don't use raw user input to form the table name
@@ -32,30 +51,12 @@ class InsertSelect implements Statement, Executable
      *                      If needed, use AP\Mysql\Helpers::escapeName() to sanitize it
      *
      * @param Select $select The SELECT query that provides data for insertion
-     *
-     * @param array<string> $cols The list of column names for insertion.
-     *                            The column names must match the SELECT statement's output columns
-     *                            The key (column name) is not safe—don't use raw user input
-     *                            If needed, use AP\Mysql\Helpers::escapeName() to sanitize it
-     *
-     * @param bool $ignore Whether to use IGNORE, preventing errors on duplicate entries
-     *
-     * @param array|null $onDupKeyUpdate Data for ON DUPLICATE KEY UPDATE.
-     *                                   Should be an associative array of column => value
-     *                                   The values (data) will be properly encoded and safe
-     *                                   Don't use raw user input to form the column name
-     *                                   If needed, use AP\Mysql\Helpers::escapeName() to sanitize it
-     *
-     * @param string $partition The partition to insert into. Don't use raw user input
      */
     public function __construct(
         private readonly ConnectInterface $connect,
-        protected string                  $table,
-        protected Select                  $select,
-        protected array                   $cols = [],
-        protected bool                    $ignore = false,
-        protected ?array                  $onDupKeyUpdate = null,
-        protected string                  $partition = "",
+        private string                    $table,
+        private Select                    $select,
+        private array                     $cols = [],
     )
     {
     }
@@ -127,7 +128,11 @@ class InsertSelect implements Statement, Executable
     /**
      * Sets the ON DUPLICATE KEY UPDATE values
      *
-     * @param array|null $onDupKeyUpdate An associative array of column => value for updating on duplicate keys
+     * @param array|null $onDupKeyUpdate Data for ON DUPLICATE KEY UPDATE.
+     *                                   Should be an associative array of column => value
+     *                                   The values (data) will be properly encoded and safe
+     *                                   Don't use raw user input to form the column name
+     *                                   If needed, use AP\Mysql\Helpers::escapeName() to sanitize it
      * @return $this
      */
     public function setOnDupKeyUpdate(?array $onDupKeyUpdate): static

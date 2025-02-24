@@ -217,7 +217,7 @@ class Select implements Statement, Executable
     /**
      * Adds a group condition to the "group by" clause
      *
-     * @param int|string $name The expression used for ordering
+     * @param int|string $name The expression used for grouping
      * @return $this
      */
     public function group(int|string $name): static
@@ -229,7 +229,7 @@ class Select implements Statement, Executable
     /**
      * Adds an expression-based group condition to the "group by" clause
      *
-     * @param string $expr The expression used for ordering
+     * @param string $expr The expression used for grouping
      * @return $this
      */
     public function groupExpr(string $expr): static

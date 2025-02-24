@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 class InsertBulkTest extends TestCase
 {
-    static public function i(string $table, array $rows,): InsertBulk
+    static public function i(string $table, array $rows): InsertBulk
     {
         return new InsertBulk(new ConnectDebug(), $table, $rows);
     }
@@ -28,6 +28,19 @@ class InsertBulkTest extends TestCase
                 ";",
                 iterator_to_array(
                     self::i("table", $rows)
+                        ->setBatch(10)
+                        ->queries()
+                )
+            )
+        );
+
+        $this->assertEquals(
+            "INSERT `table`(`id`,`label`) VALUE (1,'hello'),(2,'world'),(3,'privet')",
+            implode(
+                ";",
+                iterator_to_array(
+                    self::i("table", [])
+                        ->setRows($rows)
                         ->setBatch(10)
                         ->queries()
                 )
@@ -126,10 +139,10 @@ class InsertBulkTest extends TestCase
         );
 
         $this->assertEquals(
-            "INSERT `table`(`label`) VALUE ('hel\'lo')",
+            "INSERT `table`(`label`) VALUE ('i\'m')",
             self::i(
                 "table",
-                [["label" => "hel'lo"]]
+                [["label" => "i'm"]]
             )
                 ->queries()
                 ->current()

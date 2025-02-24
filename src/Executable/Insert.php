@@ -10,7 +10,7 @@ use AP\Mysql\Statement\Statement;
  * Represents an INSERT SQL statement
  *
  * This class provides methods to construct and execute INSERT queries,
- * supporting optional features like IGNORE, partitions, and ON DUPLICATE KEY UPDATE.
+ * supporting optional features like IGNORE, partitions, and ON duplicate key update.
  *
  * Important:
  * - Ensure column names are sanitized before passing them to avoid SQL injection
@@ -29,15 +29,15 @@ class Insert implements Statement, Executable
      *                      If using a scheme name, write it as scheme`.`table to get `scheme`.`table`
      *
      * @param array $row The row data to insert, as an associative array
-     *                   The key (column name) isn't safe for performance reasons—don't use raw user input
+     *                   The key, column name, isn't safe for performance reasons—don't use raw user input
      *                   If needed, use AP\Mysql\Helpers::escapeName() to sanitize it
-     *                   The value (data) will be properly encoded and safe for insertion
+     *                   The value, data, will be properly encoded and safe for insertion
      *
      * @param bool $ignore Whether to use IGNORE, preventing errors on duplicate entries
      *
-     * @param array|null $onDupKeyUpdate Data for ON DUPLICATE KEY UPDATE.
+     * @param array|null $onDupKeyUpdate Data for ON duplicate key update.
      *                                   Should be an associative array of column => value
-     *                                   The values (data) will be properly encoded and safe
+     *                                   The values - data will be properly encoded and safely
      *                                   Don't use raw user input to form the column name
      *                                   If needed, use AP\Mysql\Helpers::escapeName() to sanitize it
      *
@@ -73,9 +73,9 @@ class Insert implements Statement, Executable
      * Sets the row data to insert
      *
      * @param array $row The row data as an associative array
-     *                   The key (column name) isn't safe for performance reasons—don't use raw user input
+     *                   The key - column name isn't safe for performance reasons—don't use raw user input
      *                   If needed, use AP\Mysql\Helpers::escapeName() to sanitize it
-     *                   The value (data) will be properly encoded and safe for insertion
+     *                   The value - data will be properly encoded and safe for insertion
      * @return $this
      */
     public function setRow(array $row): static
@@ -109,9 +109,9 @@ class Insert implements Statement, Executable
     }
 
     /**
-     * Sets the ON DUPLICATE KEY UPDATE values
+     * Sets the on duplicate key update values
      *
-     * @param array|null $onDupKeyUpdate An associative array of column => value for updating on duplicate keys
+     * @param array|null $onDupKeyUpdate An associative array of column ⇒ value for updating on duplicate keys
      * @return $this
      */
     public function setOnDupKeyUpdate(?array $onDupKeyUpdate): static

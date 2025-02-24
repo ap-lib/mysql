@@ -22,6 +22,18 @@ class InsertTest extends TestCase
         );
 
         $this->assertEquals(
+            "INSERT `table_arch`(`id`,`label`) VALUE (1,'hello')",
+            self::i("table", ["id" => 1, "label" => "hello"])->setTable("table_arch")->query()
+        );
+
+        $this->assertEquals(
+            "INSERT `table`(`id`,`label`) VALUE (2,'world')",
+            self::i("table", ["id" => 1, "label" => "hello"])
+                ->setRow(["id" => 2, "label" => "world"])
+                ->query()
+        );
+
+        $this->assertEquals(
             "INSERT `table`(`now_md5`) VALUE (MD5(NOW()))",
             self::i("table", ["now_md5" => new Raw("MD5(NOW())")])->query()
         );
