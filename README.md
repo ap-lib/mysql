@@ -39,7 +39,7 @@ $connect = new Connect(
     'localhost', 
     'user', 
     'password', 
-    'database'
+    'scheme'
 );
 ```
 

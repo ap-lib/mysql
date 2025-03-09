@@ -21,7 +21,7 @@ class Connect implements ConnectInterface
         readonly private string $hostname,
         readonly private string $username,
         readonly private string $password,
-        readonly private string $database,
+        readonly private string $scheme,
         readonly private int    $port = 3306,
         readonly private int    $connection_attempts = 2,
         readonly private float  $connection_timeout = 1.0, // TODO: double check float timeout is available
@@ -37,7 +37,7 @@ class Connect implements ConnectInterface
             [
                 'host'    => $this->hostname,
                 'port'    => $this->port,
-                'base'    => $this->database,
+                'base'    => $this->scheme,
                 'start'   => $start,
                 'runtime' => is_null($runtime)
                     ? microtime(true) - $start
@@ -80,7 +80,7 @@ class Connect implements ConnectInterface
                         $this->hostname,
                         $this->username,
                         $this->password,
-                        $this->database,
+                        $this->scheme,
                         $this->port
                     );
                     $this->connected = true;
