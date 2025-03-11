@@ -1477,4 +1477,99 @@ class Select implements Statement, Executable
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Fetch all rows from the executed query result as an associative array.
+     *
+     * @return array The result set as an array of associative arrays.
+     */
+    public function fetchAll(): array
+    {
+        return $this->exec()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /**
+     * Fetch a single row from the executed query result as an associative array.
+     *
+     * @return ?array The first row of the result set as an associative array.
+     */
+    public function fetchRow(): array
+    {
+        return $this->exec()->fetch_assoc();
+    }
+
+    /**
+     * Fetch a single column from all rows of the executed query result.
+     *
+     * @return array An array containing the values from the first column of each row.
+     */
+    public function fetchCol(): array
+    {
+        return array_column(
+            $this->exec()->fetch_all(MYSQLI_NUM),
+            0
+        );
+    }
+
+    /**
+     * Fetch key-value pairs from the executed query result.
+     *
+     * The query must return exactly two columns: the first column as keys and the second as values.
+     *
+     * @return array An associative array where the first column is used as keys and the second as values.
+     * @throws \RuntimeException If the query does not return exactly two columns.
+     */
+    public function fetchPairs(): array
+    {
+        $res = $this->exec();
+
+        $array = [];
+
+        if ($res->field_count == 2) {
+            while ($el = $res->fetch_row()) {
+                $array[$el[0]] = $el[1];
+            }
+        } else {
+            throw new \RuntimeException(
+                'Invalid query for fetchPairs, use only 2 fields'
+            );
+        }
+
+        return $array;
+    }
+
+    /**
+     * Fetch unique rows based on the first column value.
+     *
+     * The first column is used as the key, and the corresponding row is stored as the value.
+     * If a duplicate key is encountered, it is ignored.
+     *
+     * @return array An associative array where the first column value is used as the key,
+     *               and the corresponding row (associative array) is the value.
+     */
+    public function fetchUnique(): array
+    {
+        $res   = $this->exec();
+        $array = [];
+        while ($el = $res->fetch_assoc()) {
+            $array[current($el)] = $el;
+        }
+        return $array;
+    }
+
+    /**
+     * Fetch a single value from the first column of the first row in the result set.
+     *
+     * If the query returns no rows, the provided default value is returned instead.
+     *
+     * @param mixed $default The default value to return if no rows are found. Defaults to `false`.
+     * @return mixed The first column's value from the first row, or the default value if no results exist.
+     */
+    public function fetchOne($default = false)
+    {
+        $res = $this->exec();
+        return $res->num_rows ?
+            $res->fetch_row()[0] :
+            $default;
+    }
 }
