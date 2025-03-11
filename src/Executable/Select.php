@@ -1493,7 +1493,7 @@ class Select implements Statement, Executable
      *
      * @return ?array The first row of the result set as an associative array.
      */
-    public function fetchRow(): array
+    public function fetchRow(): ?array
     {
         return $this->exec()->fetch_assoc();
     }
