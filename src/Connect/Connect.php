@@ -15,7 +15,9 @@ class Connect implements ConnectInterface
     use ConnectStatements;
 
     readonly private mysqli $mysqli;
-    private bool            $connected = false;
+    private bool            $connected              = false;
+    protected bool          $transaction_now        = false;
+    protected int           $transactions_end_break = 0;
 
     public function __construct(
         readonly private string $hostname,
@@ -83,7 +85,9 @@ class Connect implements ConnectInterface
                         $this->scheme,
                         $this->port
                     );
-                    $this->connected = true;
+                    $this->connected              = true;
+                    $this->transaction_now        = false;
+                    $this->transactions_end_break = 0;
                     $this->log('connect', $start);
                     break;
                 } catch (mysqli_sql_exception $e) {
@@ -161,5 +165,35 @@ class Connect implements ConnectInterface
     public function lastAffectedRows(): int
     {
         return (int)$this->driver()->affected_rows;
+    }
+
+    public function transactionStart(): void
+    {
+        if ($this->transaction_now) {
+            $this->transactions_end_break++;
+        } else {
+            $this->exec("START TRANSACTION");
+            $this->transaction_now = true;
+        }
+    }
+
+    public function transactionCommit(): void
+    {
+        if ($this->transaction_now && $this->transactions_end_break) {
+            $this->transactions_end_break--;
+        } else {
+            $this->exec("COMMIT");
+            $this->transaction_now = false;
+        }
+    }
+
+    public function transactionRollback(): void
+    {
+        if ($this->transaction_now && $this->transactions_end_break) {
+            $this->transactions_end_break--;
+        } else {
+            $this->exec("ROLLBACK");
+            $this->transaction_now = false;
+        }
     }
 }
