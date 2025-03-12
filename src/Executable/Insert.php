@@ -147,4 +147,15 @@ class Insert implements Statement, Executable
     {
         return $this->connect->exec($this->query());
     }
+
+    /**
+     * Executes the INSERT statement and returns the last inserted ID.
+     *
+     * @return int The ID of the most recently inserted row.
+     */
+    public function execAndGetLastID(): int
+    {
+        $this->exec();
+        return $this->connect->lastInsertId();
+    }
 }
