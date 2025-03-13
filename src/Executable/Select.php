@@ -77,16 +77,11 @@ class Select implements Statement, Executable
 
     public function query(): string
     {
-        return $this->queryFlexibleColumns($this->buildColumns());
-    }
-
-    private function queryFlexibleColumns(string $columns): string
-    {
         return 'SELECT ' .
             ($this->distinct ? 'DISTINCT ' : '') .
             ($this->straightJoin ? 'STRAIGHT_JOIN ' : '') .
             (is_bool($this->sqlSmallResult) ? ($this->sqlSmallResult ? 'SQL_SMALL_RESULT ' : 'SQL_BIG_RESULT ') : '') .
-            "$columns FROM " .
+            "{$this->buildColumns()} FROM " .
             $this->table .
             $this->join .
             (empty($this->where) ? '' : ' WHERE ' . substr($this->where, 5)) .
@@ -1592,10 +1587,8 @@ class Select implements Statement, Executable
 
     public function fetchCountAll(): int
     {
-        return (int)(
-            $this->connect->exec(
-                $this->queryFlexibleColumns("count(*)")
-            )->fetch_row()[0] ?? 0
-        );
+        return (int)(clone $this)
+            ->setColumnCountAll()
+            ->fetchOne();
     }
 }
