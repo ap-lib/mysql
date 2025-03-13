@@ -111,6 +111,18 @@ class Select implements Statement, Executable
         return $this;
     }
 
+    /**
+     * Sets the column selection to count the total number of rows.
+     *
+     * This method modifies the query to use `SELECT count(*)`,
+     * which returns the total row count instead of selecting specific columns.
+     */
+    public function setColumnCountAll(): static
+    {
+        $this->columns = [new Raw("count(*)")];
+        return $this;
+    }
+
     public function setLimit(?int $limit, ?int $offset = null): static
     {
         $this->limit  = $limit;
