@@ -177,7 +177,7 @@ class Select implements Statement, Executable
     private function baseJoin(
         string             $type,
         string|TableFactor $table,
-        string|Raw|Where   $where,
+        string|array|Where $where,
     ): static
     {
         $this->join .= " $type " .
