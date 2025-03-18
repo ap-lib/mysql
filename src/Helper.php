@@ -3,7 +3,6 @@
 namespace AP\Mysql;
 
 use AP\Mysql\Connect\ConnectInterface;
-use AP\Mysql\Executable\Select;
 use AP\Mysql\Statement\Where;
 use Generator;
 use UnexpectedValueException;
@@ -125,21 +124,31 @@ class Helper
         }
     }
 
-    static public function prepareWhere(ConnectInterface $connect, string $command, Where|array|null $where)
+    /**
+     * @param ConnectInterface $connect
+     * @param string $command
+     * @param Where|array|null $on [["items", "user_id"], ["users", "id"]] -> `items`.`user_id`=`users`.`id`
+     * @return string
+     */
+    static public function prepareJoinOn(ConnectInterface $connect, string $command, Where|array|null $on)
     {
-        if (is_array($where)) {
+        if (is_array($on)) {
             // A performance-focused, simplified version with an array-like structure for $where
             // expected to be the most frequently used option
-            if (!empty($where)) {
-                $all = [];
-                foreach ($where as $k => $v) {
-                    $all[] = "`$k`={$connect->escape($v)}";
+            if (!empty($on)) {
+                if (isset($on[0], $on[1])
+                    && count($on) == 2
+                    && (is_array($on[0]) && isset($on[0][0], $on[0][1]) && count($on[0]) == 2)
+                    && (is_array($on[1]) && isset($on[1][0], $on[1][1]) && count($on[1]) == 2)
+                ) {
+                    return "$command `{$on[0][0]}`.`{$on[0][1]}`=`{$on[1][0]}`.`{$on[1][1]}`";
+                } else {
+                    throw new UnexpectedValueException("on array must have format [['tbl1', 'field1'], ['tbl2', 'field2']]");
                 }
-                return "$command " . implode(" AND ", $all);
             }
         }
-        if ($where instanceof Where) {
-            return "$command {$where->query()}";
+        if ($on instanceof Where) {
+            return "$command {$on->query()}";
         }
         return "";
     }

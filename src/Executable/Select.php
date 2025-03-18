@@ -179,51 +179,73 @@ class Select implements Statement, Executable
     private function baseJoin(
         string             $type,
         string|TableFactor $table,
-        string|array|Where $where,
+        string|array|Where $on,
     ): static
     {
         $this->join .= " $type " .
             (is_string($table) ? "`$table`" : $table->query()) .
-            (is_string($where)
-                ? " ON $where"
-                : Helper::prepareWhere($this->connect, ' ON', $where)
+            (is_string($on)
+                ? " ON $on"
+                : Helper::prepareJoinOn($this->connect, ' ON', $on)
             );
 
         return $this;
     }
 
+    /**
+     * @param string|TableFactor $table
+     * @param string|array|Where $on example: [["items", "user_id"], ["users", "id"]] -> `items`.`user_id`=`users`.`id`
+     * @return $this
+     */
     public function joinInner(
         string|TableFactor $table,
-        string|array|Where $where,
+        string|array|Where $on,
     ): static
     {
-        return $this->baseJoin('JOIN', $table, $where);
+        return $this->baseJoin('JOIN', $table, $on);
     }
 
+    /**
+     * @param string|TableFactor $table
+     * @param string|array|Where $on example: [["items", "user_id"], ["users", "id"]] -> `items`.`user_id`=`users`.`id`
+     * @param bool $outer
+     * @return $this
+     */
     public function joinLeft(
         string|TableFactor $table,
-        string|array|Where $where,
+        string|array|Where $on,
         bool               $outer = false
     ): static
     {
-        return $this->baseJoin('LEFT ' . ($outer ? 'OUTER ' : '') . 'JOIN', $table, $where);
+        return $this->baseJoin('LEFT ' . ($outer ? 'OUTER ' : '') . 'JOIN', $table, $on);
     }
 
+    /**
+     * @param string|TableFactor $table
+     * @param string|array|Where $on example: [["items", "user_id"], ["users", "id"]] -> `items`.`user_id`=`users`.`id`
+     * @param bool $outer
+     * @return $this
+     */
     public function joinRight(
         string|TableFactor $table,
-        string|array|Where $where,
+        string|array|Where $on,
         bool               $outer = false
     ): static
     {
-        return $this->baseJoin('RIGHT ' . ($outer ? 'OUTER ' : '') . 'JOIN', $table, $where);
+        return $this->baseJoin('RIGHT ' . ($outer ? 'OUTER ' : '') . 'JOIN', $table, $on);
     }
 
+    /**
+     * @param string|TableFactor $table
+     * @param string|array|Where $on example: [["items", "user_id"], ["users", "id"]] -> `items`.`user_id`=`users`.`id`
+     * @return $this
+     */
     public function joinStraight(
         string|TableFactor $table,
-        string|array|Where $where,
+        string|array|Where $on,
     ): static
     {
-        return $this->baseJoin('STRAIGHT_JOIN', $table, $where);
+        return $this->baseJoin('STRAIGHT_JOIN', $table, $on);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
