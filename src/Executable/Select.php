@@ -91,7 +91,7 @@ class Select implements Statement, Executable
             (empty($this->having) ? '' : ' HAVING ' . substr($this->having, 5)) .
             (empty($this->window) ? '' : " WINDOW $this->window") .
             (empty($this->order) ? '' : ' ORDER BY ' . substr($this->order, 1)) .
-            (is_int($this->limit) ? (" LIMIT $this->limit" . (is_int($this->offset) ? ",$this->offset" : '')) : '');
+            (is_int($this->limit) ? (' LIMIT ' . (is_int($this->offset) ? "$this->offset," : '') . "$this->limit") : '');
     }
 
     public function exec(): mysqli_result

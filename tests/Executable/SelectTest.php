@@ -37,8 +37,8 @@ class SelectTest extends TestCase
         $this->assertEquals(/** @lang text */ "SELECT * FROM `table` HAVING `id`=1 OR  `label`='hello'", self::s("table")->havingEq("id", 1)->orHavingEq("label", "hello")->query());
 
         $this->assertEquals(/** @lang text */ "SELECT * FROM `table` LIMIT 10", self::s("table")->setLimit(10)->query());
-        $this->assertEquals(/** @lang text */ "SELECT * FROM `table` LIMIT 10,5", self::s("table")->setLimit(10, 5)->query());
-        $this->assertEquals(/** @lang text */ "SELECT * FROM `table` LIMIT 10,5", self::s("table")->setLimit(10)->setOffset(5)->query());
+        $this->assertEquals(/** @lang text */ "SELECT * FROM `table` LIMIT 5,10", self::s("table")->setLimit(10, 5)->query());
+        $this->assertEquals(/** @lang text */ "SELECT * FROM `table` LIMIT 5,10", self::s("table")->setLimit(10)->setOffset(5)->query());
 
         $this->assertEquals(/** @lang text */ "SELECT DISTINCT `name` FROM `table`", self::s("table", columns: ["name"])->distinct()->query());
 
