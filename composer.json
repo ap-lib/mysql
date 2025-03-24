@@ -24,6 +24,7 @@
   "require": {
     "php": "^8.3",
     "ap-lib/logger": "dev-main",
+    "ap-lib/scheme": "dev-main",
     "ext-mysqli": "*",
     "ext-ctype": "*"
   },

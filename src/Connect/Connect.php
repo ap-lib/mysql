@@ -4,6 +4,8 @@ namespace AP\Mysql\Connect;
 
 use AP\Logger\Log;
 use AP\Mysql\Raw;
+use AP\Scheme\FromObject;
+use AP\Scheme\FromObjectToDatabase;
 use JsonException;
 use mysqli;
 use mysqli_result;
@@ -135,6 +137,12 @@ class Connect implements ConnectInterface
     {
         // TODO: maybe need to add Interface-like code to be able to do custom escapes
 
+        if ($value instanceof FromObjectToDatabase) {
+            $value = $value->fromObjectToDatabase();
+        } elseif ($value instanceof FromObject) {
+            $value = $value->fromObject();
+        }
+
         if (is_string($value)) {
             return "'{$this->driver()->real_escape_string($value)}'";
         }
@@ -153,6 +161,7 @@ class Connect implements ConnectInterface
         if (is_array($value)) {
             return json_encode($value, JSON_THROW_ON_ERROR);
         }
+
 
         throw new UnexpectedValueException('this value can\'t be escaped');
     }
