@@ -90,7 +90,7 @@ class Connect implements ConnectInterface
                     $this->connected              = true;
                     $this->transaction_now        = false;
                     $this->transactions_end_break = 0;
-                    $this->log('connect', $start);
+                    $this->log("connect $this->hostname/$this->scheme", $start);
                     break;
                 } catch (mysqli_sql_exception $e) {
                     $iter++;
