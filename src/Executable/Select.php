@@ -539,6 +539,10 @@ class Select implements Statement, Executable
     public function whereIn(string $name, array|Select $list): static
     {
         if (is_array($list)) {
+            if (empty($list)) {
+                $this->where .= " AND 0=1";
+                return $this;
+            }
             foreach ($list as $k => $v) {
                 $list[$k] = $this->connect->escape($v);
             }
@@ -564,6 +568,9 @@ class Select implements Statement, Executable
     public function whereNotIn(string $name, array|Select $list): static
     {
         if (is_array($list)) {
+            if (empty($list)) {
+                return $this;
+            }
             foreach ($list as $k => $v) {
                 $list[$k] = $this->connect->escape($v);
             }
@@ -834,6 +841,10 @@ class Select implements Statement, Executable
     public function orWhereIn(string $name, array|Select $list): static
     {
         if (is_array($list)) {
+            if (empty($list)) {
+                $this->where .= " OR  0=1";
+                return $this;
+            }
             foreach ($list as $k => $v) {
                 $list[$k] = $this->connect->escape($v);
             }
@@ -859,6 +870,10 @@ class Select implements Statement, Executable
     public function orWhereNotIn(string $name, array|Select $list): static
     {
         if (is_array($list)) {
+            if (empty($list)) {
+                $this->where .= " OR  1=1";
+                return $this;
+            }
             foreach ($list as $k => $v) {
                 $list[$k] = $this->connect->escape($v);
             }
