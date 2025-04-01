@@ -400,7 +400,7 @@ class Delete implements Statement, Executable
     {
         if (is_array($list)) {
             if (empty($list)) {
-                $this->where .= " AND 0=1";
+                $this->where .= " AND FALSE";
                 return $this;
             }
             foreach ($list as $k => $v) {
@@ -702,7 +702,7 @@ class Delete implements Statement, Executable
     {
         if (is_array($list)) {
             if (empty($list)) {
-                $this->where .= " OR  0=1";
+                $this->where .= " OR  FALSE";
                 return $this;
             }
             foreach ($list as $k => $v) {
@@ -731,7 +731,7 @@ class Delete implements Statement, Executable
     {
         if (is_array($list)) {
             if (empty($list)) {
-                $this->where .= " OR  1=1";
+                $this->where .= " OR  TRUE";
                 return $this;
             }
             foreach ($list as $k => $v) {
