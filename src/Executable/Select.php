@@ -113,9 +113,13 @@ class Select implements Statement, Executable
         return $this;
     }
 
-    public function addColumn(string|Select|Raw|array $column): static
+    public function addColumn(string|Select|Raw|array $column, ?string $alias = null): static
     {
-        $this->columns[] = $column;
+        if (is_null($alias)) {
+            $this->columns[] = $column;
+        } else {
+            $this->columns[$alias] = $column;
+        }
         return $this;
     }
 
