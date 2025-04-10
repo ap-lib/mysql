@@ -143,7 +143,7 @@ class Helper
                 ) {
                     return "$command `{$on[0][0]}`.`{$on[0][1]}`=`{$on[1][0]}`.`{$on[1][1]}`";
                 } else {
-                    throw new UnexpectedValueException("on array must have format [['tbl1', 'field1'], ['tbl2', 'field2']]");
+                    throw new UnexpectedValueException("join on array must have format [['tbl1', 'field1'], ['tbl2', 'field2']]");
                 }
             }
         }
