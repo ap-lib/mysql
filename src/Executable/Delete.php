@@ -795,5 +795,15 @@ class Delete implements Statement, Executable
         return $this;
     }
 
+    /**
+     * Make a new where instance linked to same database connection
+     *
+     * @return Where
+     */
+    public function makeWhere(): Where
+    {
+        return new Where($this->connect);
+    }
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
