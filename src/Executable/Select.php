@@ -65,7 +65,7 @@ class Select implements Statement, Executable
                 $columns .= "({$v->query()})";
             } elseif ($v instanceof Raw) {
                 $columns .= "{$v->escape($this->connect)}";
-            } elseif (is_array($v) && isset($v[0],$v[1]) && count($v) == 2) {
+            } elseif (is_array($v) && isset($v[0], $v[1]) && count($v) == 2) {
                 $columns .= "`$v[0]`.`$v[1]`";
             } else {
                 throw new UnexpectedValueException(
@@ -1525,6 +1525,16 @@ class Select implements Statement, Executable
     {
         $this->having .= ' OR  (' . $sub(new Where($this->connect))->query() . ')';
         return $this;
+    }
+
+    /**
+     * Make a new where instance linked to same database connection
+     *
+     * @return Where
+     */
+    public function makeWhere(): Where
+    {
+        return new Where($this->connect);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
