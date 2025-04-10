@@ -119,7 +119,7 @@ class Select implements Statement, Executable
         return $this;
     }
 
-    public function getColumns(string|Select|Raw|array $column): array
+    public function getColumns(): array
     {
         return $this->columns;
     }
