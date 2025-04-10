@@ -113,6 +113,17 @@ class Select implements Statement, Executable
         return $this;
     }
 
+    public function addColumn(string|Select|Raw|array $column): static
+    {
+        $this->columns[] = $column;
+        return $this;
+    }
+
+    public function getColumns(string|Select|Raw|array $column): array
+    {
+        return $this->columns;
+    }
+
     /**
      * Sets the column selection to count the total number of rows.
      *
