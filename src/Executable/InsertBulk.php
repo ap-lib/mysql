@@ -49,15 +49,15 @@ class InsertBulk implements Executable
      *                             false can boost performance
      */
     public function __construct(
-        private readonly ConnectInterface $connect,
-        protected string                  $table,
-        protected array                   $rows,
-        protected int                     $batch = 1000,
-        protected array                   $addToRow = [],
-        protected bool                    $ignore = false,
-        protected string                  $partition = "",
-        protected ?array                  $onDupKeyUpdate = null,
-        protected bool                    $deepValidation = true,
+        public readonly ConnectInterface $connect,
+        protected string                 $table,
+        protected array                  $rows,
+        protected int                    $batch = 1000,
+        protected array                  $addToRow = [],
+        protected bool                   $ignore = false,
+        protected string                 $partition = "",
+        protected ?array                 $onDupKeyUpdate = null,
+        protected bool                   $deepValidation = true,
     )
     {
     }

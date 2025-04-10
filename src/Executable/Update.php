@@ -41,7 +41,7 @@ class Update implements Statement, Executable
      *                      If using a scheme name, write it as scheme`.`table to get `scheme`.`table`
      */
     public function __construct(
-        private readonly ConnectInterface $connect,
+        public readonly ConnectInterface $connect,
         private string                    $table,
 
     )

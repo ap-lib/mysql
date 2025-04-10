@@ -48,13 +48,13 @@ class ReplaceBulk implements Executable
      *                             false can boost performance
      */
     public function __construct(
-        private readonly ConnectInterface $connect,
-        protected string                  $table,
-        protected array                   $rows,
-        protected int                     $batch = 1000,
-        protected array                   $addToRow = [],
-        protected string                  $partition = "",
-        protected bool                    $deepValidation = true,
+        public readonly ConnectInterface $connect,
+        protected string                 $table,
+        protected array                  $rows,
+        protected int                    $batch = 1000,
+        protected array                  $addToRow = [],
+        protected string                 $partition = "",
+        protected bool                   $deepValidation = true,
     )
     {
     }

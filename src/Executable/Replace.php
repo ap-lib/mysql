@@ -3,8 +3,8 @@
 namespace AP\Mysql\Executable;
 
 use AP\Mysql\Connect\ConnectInterface;
-use AP\Mysql\Statement\Statement;
 use AP\Mysql\Helper;
+use AP\Mysql\Statement\Statement;
 
 /**
  * Represents a REPLACE SQL statement
@@ -37,10 +37,10 @@ class Replace implements Statement, Executable
      * @param string $partition The partition to insert into. Don't use raw user input
      */
     public function __construct(
-        private readonly ConnectInterface $connect,
-        protected string                  $table,
-        protected array                   $row,
-        protected string                  $partition = "",
+        public readonly ConnectInterface $connect,
+        protected string                 $table,
+        protected array                  $row,
+        protected string                 $partition = "",
     )
     {
     }

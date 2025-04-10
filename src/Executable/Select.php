@@ -43,7 +43,7 @@ class Select implements Statement, Executable
      * @param array $columns
      */
     public function __construct(
-        private readonly ConnectInterface $connect,
+        public readonly ConnectInterface $connect,
         string|TableFactor                $table,
         private array                     $columns = [],
     )

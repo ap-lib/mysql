@@ -40,7 +40,7 @@ class ReplaceSelect implements Statement, Executable
      * @param string $partition The partition to insert into. Don't use raw user input
      */
     public function __construct(
-        private readonly ConnectInterface $connect,
+        public readonly ConnectInterface $connect,
         protected string                  $table,
         protected Select                  $select,
         protected array                   $cols = [],

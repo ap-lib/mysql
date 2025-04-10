@@ -44,12 +44,12 @@ class Insert implements Statement, Executable
      * @param string $partition The partition to insert into. Don't use raw user input
      */
     public function __construct(
-        private readonly ConnectInterface $connect,
-        protected string                  $table,
-        protected array                   $row,
-        protected bool                    $ignore = false,
-        protected ?array                  $onDupKeyUpdate = null,
-        protected string                  $partition = "",
+        public readonly ConnectInterface $connect,
+        protected string                 $table,
+        protected array                  $row,
+        protected bool                   $ignore = false,
+        protected ?array                 $onDupKeyUpdate = null,
+        protected string                 $partition = "",
     )
     {
     }

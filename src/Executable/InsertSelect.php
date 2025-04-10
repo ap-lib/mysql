@@ -53,10 +53,10 @@ class InsertSelect implements Statement, Executable
      * @param Select $select The SELECT query that provides data for insertion
      */
     public function __construct(
-        private readonly ConnectInterface $connect,
-        private string                    $table,
-        private Select                    $select,
-        private array                     $cols = [],
+        public readonly ConnectInterface $connect,
+        private string                   $table,
+        private Select                   $select,
+        private array                    $cols = [],
     )
     {
     }

@@ -14,7 +14,7 @@ class Where implements Statement
      * @param ConnectInterface $connect
      */
     public function __construct(
-        private readonly ConnectInterface $connect,
+        public readonly ConnectInterface $connect,
     )
     {
     }
