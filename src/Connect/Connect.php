@@ -6,10 +6,12 @@ use AP\Logger\Log;
 use AP\Mysql\Raw;
 use AP\Scheme\FromObject;
 use AP\Scheme\FromObjectToDatabase;
+use IntBackedEnum;
 use JsonException;
 use mysqli;
 use mysqli_result;
 use mysqli_sql_exception;
+use StringBackedEnum;
 use UnexpectedValueException;
 
 class Connect implements ConnectInterface
@@ -157,6 +159,12 @@ class Connect implements ConnectInterface
         }
         if ($value instanceof Raw) {
             return $value->escape($this);
+        }
+        if ($value instanceof IntBackedEnum) {
+            return (string)$value->value;
+        }
+        if ($value instanceof StringBackedEnum) {
+            return "'{$this->driver()->real_escape_string($value->value)}'";
         }
         if (is_array($value)) {
             return json_encode($value, JSON_THROW_ON_ERROR);
