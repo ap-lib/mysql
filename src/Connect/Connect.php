@@ -159,14 +159,13 @@ class Connect implements ConnectInterface
         if ($value instanceof Raw) {
             return $value->escape($this);
         }
+
         if ($value instanceof BackedEnum) {
-            $backingType = gettype($value->value);
-            if ($backingType === 'int') {
+            if (is_int($value->value)) {
                 return (string)$value->value;
-            } elseif ($backingType === 'string') {
+            } elseif (is_string($value->value)) {
                 return "'{$this->driver()->real_escape_string($value->value)}'";
             }
-
         }
         if (is_array($value)) {
             return json_encode($value, JSON_THROW_ON_ERROR);
