@@ -4,6 +4,7 @@ namespace AP\Mysql\Statement;
 
 use AP\Mysql\Connect\ConnectInterface;
 use AP\Mysql\Executable\Select;
+use AP\Mysql\Helper;
 use Closure;
 
 class Where implements Statement
@@ -55,81 +56,81 @@ class Where implements Statement
         return $this;
     }
 
-    public function eq(string $name, mixed $value): static
+    public function eq(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name`={$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . "={$this->connect->escape($value)}";
         return $this;
     }
 
-    public function notEq(string $name, mixed $value): static
+    public function notEq(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name`<>{$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . "<>{$this->connect->escape($value)}";
         return $this;
     }
 
-    public function gt(string $name, mixed $value): static
+    public function gt(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name`>{$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . ">{$this->connect->escape($value)}";
         return $this;
     }
 
-    public function lt(string $name, mixed $value): static
+    public function lt(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name`<{$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . "<{$this->connect->escape($value)}";
         return $this;
     }
 
-    public function gte(string $name, mixed $value): static
+    public function gte(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name`>={$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . ">={$this->connect->escape($value)}";
         return $this;
     }
 
-    public function lte(string $name, mixed $value): static
+    public function lte(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name`<={$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . "<={$this->connect->escape($value)}";
         return $this;
     }
 
-    public function like(string $name, mixed $value): static
+    public function like(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name` LIKE {$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
-    public function notLike(string $name, mixed $value): static
+    public function notLike(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name` NOT LIKE {$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " NOT LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
-    public function isNull(string $name): static
+    public function isNull(string|array $name): static
     {
-        $this->where .= " AND `$name` IS NULL";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " IS NULL";
         return $this;
     }
 
-    public function isNotNull(string $name): static
+    public function isNotNull(string|array $name): static
     {
-        $this->where .= " AND `$name` IS NOT NULL";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " IS NOT NULL";
         return $this;
     }
 
-    public function between(string $name, mixed $start, mixed $end): static
+    public function between(string|array $name, mixed $start, mixed $end): static
     {
-        $this->where .= " AND `$name` BETWEEN {$this->connect->escape($start)} AND {$this->connect->escape($end)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " BETWEEN {$this->connect->escape($start)} AND {$this->connect->escape($end)}";
         return $this;
     }
 
-    public function in(string $name, array|Select $list): static
+    public function in(string|array $name, array|Select $list): static
     {
-        $this->where .= " AND `$name` IN {$this->escapeList($list)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " IN {$this->escapeList($list)}";
         return $this;
     }
 
-    public function notIn(string $name, array|Select $list): static
+    public function notIn(string|array $name, array|Select $list): static
     {
-        $this->where .= " AND `$name` NOT IN {$this->escapeList($list)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " NOT IN {$this->escapeList($list)}";
         return $this;
     }
 
@@ -172,81 +173,81 @@ class Where implements Statement
         return $this;
     }
 
-    public function orEq(string $name, mixed $value): static
+    public function orEq(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name`={$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . "={$this->connect->escape($value)}";
         return $this;
     }
 
-    public function orNotEq(string $name, mixed $value): static
+    public function orNotEq(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name`<>{$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . "<>{$this->connect->escape($value)}";
         return $this;
     }
 
-    public function orGt(string $name, mixed $value): static
+    public function orGt(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name`>{$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . ">{$this->connect->escape($value)}";
         return $this;
     }
 
-    public function orLt(string $name, mixed $value): static
+    public function orLt(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name`<{$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . "<{$this->connect->escape($value)}";
         return $this;
     }
 
-    public function orGte(string $name, mixed $value): static
+    public function orGte(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name`>={$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . ">={$this->connect->escape($value)}";
         return $this;
     }
 
-    public function orLte(string $name, mixed $value): static
+    public function orLte(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name`<={$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . "<={$this->connect->escape($value)}";
         return $this;
     }
 
-    public function orLike(string $name, mixed $value): static
+    public function orLike(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name` LIKE {$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
-    public function orNotLike(string $name, mixed $value): static
+    public function orNotLike(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name` NOT LIKE {$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " NOT LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
-    public function orIsNull(string $name): static
+    public function orIsNull(string|array $name): static
     {
-        $this->where .= " OR  `$name` IS NULL";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " IS NULL";
         return $this;
     }
 
-    public function orIsNotNull(string $name): static
+    public function orIsNotNull(string|array $name): static
     {
-        $this->where .= " OR  `$name` IS NOT NULL";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " IS NOT NULL";
         return $this;
     }
 
-    public function orBetween(string $name, mixed $start, mixed $end): static
+    public function orBetween(string|array $name, mixed $start, mixed $end): static
     {
-        $this->where .= " OR  `$name` BETWEEN {$this->connect->escape($start)} AND {$this->connect->escape($end)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " BETWEEN {$this->connect->escape($start)} AND {$this->connect->escape($end)}";
         return $this;
     }
 
-    public function orIn(string $name, array|Select $list): static
+    public function orIn(string|array $name, array|Select $list): static
     {
-        $this->where .= " OR  `$name` IN {$this->escapeList($list)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " IN {$this->escapeList($list)}";
         return $this;
     }
 
-    public function orNotIn(string $name, array|Select $list): static
+    public function orNotIn(string|array $name, array|Select $list): static
     {
-        $this->where .= " OR  `$name` NOT IN {$this->escapeList($list)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " NOT IN {$this->escapeList($list)}";
         return $this;
     }
 

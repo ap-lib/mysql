@@ -3,6 +3,7 @@
 namespace AP\Mysql\Executable;
 
 use AP\Mysql\Connect\ConnectInterface;
+use AP\Mysql\Helper;
 use AP\Mysql\Statement\Statement;
 use AP\Mysql\Statement\Where;
 use Closure;
@@ -72,9 +73,9 @@ class Update implements Statement, Executable
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    public function assignment(string $name, mixed $value): static
+    public function assignment(string|array $name, mixed $value): static
     {
-        $this->assignments .= ",`$name`={$this->connect->escape($value)}";
+        $this->assignments .= "," . Helper::escapeNameUnsafe($name) . "={$this->connect->escape($value)}";
         return $this;
     }
 
@@ -89,7 +90,7 @@ class Update implements Statement, Executable
     public function assignments(array $assignments): static
     {
         foreach ($assignments as $name => $value) {
-            $this->assignments .= ",`$name`={$this->connect->escape($value)}";
+            $this->assignments .= "," . Helper::escapeNameUnsafe($name) . "={$this->connect->escape($value)}";
         }
         return $this;
     }
@@ -165,28 +166,35 @@ class Update implements Statement, Executable
     /**
      * Adds an ascending order condition to the "order by" clause
      *
-     * @param string|int $name The column name or index to order by. The name will be just wrapped in backticks
+     * @param string|array|int $name The column name or index to order by. The name will be just wrapped in backticks
      *                         Don't use raw user input directly to form column names.
      *                         If ordered by an aliased column, write it as o`.`column to get `o`.`column`
+     *                         or use array ['o', 'column']
      * @return $this
      */
-    public function order(string|int $name): static
+    public function order(string|array|int $name): static
     {
-        $this->order .= is_string($name) ? ",`$name`" : ",$name";
+        $this->order .= is_int($name) ?
+            ",$name"
+            : "," . Helper::escapeNameUnsafe($name);
+
         return $this;
     }
 
     /**
      * Adds a descending order condition to the "order by" clause
      *
-     * @param string|int $name The column name or index to order by. The name will be just wrapped in backticks
+     * @param string|array|int $name The column name or index to order by. The name will be just wrapped in backticks
      *                         Don't use raw user input directly to form column names.
      *                         If ordered by an aliased column, write it as o`.`column to get `o`.`column`
+     *                         or use array ['o', 'column']
      * @return $this
      */
-    public function orderDesc(string|int $name): static
+    public function orderDesc(string|array|int $name): static
     {
-        $this->order .= is_string($name) ? ",`$name` DESC" : ",$name DESC";
+        $this->order .= is_int($name)
+            ? ",$name DESC"
+            : "," . Helper::escapeNameUnsafe($name) . " DESC";
         return $this;
     }
 
@@ -240,165 +248,165 @@ class Update implements Statement, Executable
     /**
      * Adds "And" an equality condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value It'll be safety escaped
      * @return $this
      */
-    public function whereEq(string $name, mixed $value): static
+    public function whereEq(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name`={$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . "={$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds "And" a Not Equal condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to compare. It'll be safely escaped
      * @return $this
      */
-    public function whereNotEq(string $name, mixed $value): static
+    public function whereNotEq(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name`<>{$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . "<>{$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds "And" a Greater than condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to compare. It'll be safely escaped
      * @return $this
      */
-    public function whereGt(string $name, mixed $value): static
+    public function whereGt(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name`>{$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . ">{$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds "And" a Less than condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to compare. It'll be safely escaped
      * @return $this
      */
-    public function whereLt(string $name, mixed $value): static
+    public function whereLt(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name`<{$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . "<{$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds "And" a Greater than OR Equal condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to compare. It'll be safely escaped
      * @return $this
      */
-    public function whereGte(string $name, mixed $value): static
+    public function whereGte(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name`>={$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . ">={$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds "And" a Less than OR Equal condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to compare. It'll be safely escaped
      * @return $this
      */
-    public function whereLte(string $name, mixed $value): static
+    public function whereLte(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name`<={$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . "<={$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds "And" a like condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to match. It'll be safely escaped
      * @return $this
      */
-    public function whereLike(string $name, mixed $value): static
+    public function whereLike(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name` LIKE {$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds "And" a not like condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to match. It'll be safely escaped
      * @return $this
      */
-    public function whereNotLike(string $name, mixed $value): static
+    public function whereNotLike(string|array $name, mixed $value): static
     {
-        $this->where .= " AND `$name` NOT LIKE {$this->connect->escape($value)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " NOT LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds "And" Is Null condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @return $this
      */
-    public function whereIsNull(string $name): static
+    public function whereIsNull(string|array $name): static
     {
-        $this->where .= " AND `$name` IS NULL";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " IS NULL";
         return $this;
     }
 
     /**
      * Adds "And" Isn't Null condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @return $this
      */
-    public function whereIsNotNull(string $name): static
+    public function whereIsNotNull(string|array $name): static
     {
-        $this->where .= " AND `$name` IS NOT NULL";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " IS NOT NULL";
         return $this;
     }
 
     /**
      * Adds "And" a BETWEEN condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
@@ -406,23 +414,23 @@ class Update implements Statement, Executable
      * @param mixed $end The ending value. It'll be safely escaped
      * @return $this
      */
-    public function whereBetween(string $name, mixed $start, mixed $end): static
+    public function whereBetween(string|array $name, mixed $start, mixed $end): static
     {
-        $this->where .= " AND `$name` BETWEEN {$this->connect->escape($start)} AND {$this->connect->escape($end)}";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " BETWEEN {$this->connect->escape($start)} AND {$this->connect->escape($end)}";
         return $this;
     }
 
     /**
      * Adds "And" an IN condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param array|Select $list The list of values or a sub query. It'll be safely escaped
      * @return $this
      */
-    public function whereIn(string $name, array|Select $list): static
+    public function whereIn(string|array $name, array|Select $list): static
     {
         if (is_array($list)) {
             if (empty($list)) {
@@ -437,21 +445,21 @@ class Update implements Statement, Executable
             $list = "({$list->query()})";
         }
 
-        $this->where .= " AND `$name` IN $list";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " IN $list";
         return $this;
     }
 
     /**
      * Adds "And" a not IN condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param array|Select $list The list of values or a sub query. It'll be safely escaped
      * @return $this
      */
-    public function whereNotIn(string $name, array|Select $list): static
+    public function whereNotIn(string|array $name, array|Select $list): static
     {
         if (is_array($list)) {
             if (empty($list)) {
@@ -465,7 +473,7 @@ class Update implements Statement, Executable
             $list = "({$list->query()})";
         }
 
-        $this->where .= " AND `$name` NOT IN $list";
+        $this->where .= " AND " . Helper::escapeNameUnsafe($name) . " NOT IN $list";
         return $this;
     }
 
@@ -542,165 +550,165 @@ class Update implements Statement, Executable
     /**
      * Adds OR an equality condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value It'll be safety escaped
      * @return $this
      */
-    public function orWhereEq(string $name, mixed $value): static
+    public function orWhereEq(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name`={$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . "={$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds OR a Not Equal condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to compare. It'll be safely escaped
      * @return $this
      */
-    public function orWhereNotEq(string $name, mixed $value): static
+    public function orWhereNotEq(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name`<>{$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . "<>{$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds OR a Greater than condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to compare. It'll be safely escaped
      * @return $this
      */
-    public function orWhereGt(string $name, mixed $value): static
+    public function orWhereGt(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name`>{$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . ">{$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds OR a Less than condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to compare. It'll be safely escaped
      * @return $this
      */
-    public function orWhereLt(string $name, mixed $value): static
+    public function orWhereLt(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name`<{$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . "<{$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds OR a Greater than OR Equal condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to compare. It'll be safely escaped
      * @return $this
      */
-    public function orWhereGte(string $name, mixed $value): static
+    public function orWhereGte(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name`>={$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . ">={$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds OR a Less than OR Equal condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to compare. It'll be safely escaped
      * @return $this
      */
-    public function orWhereLte(string $name, mixed $value): static
+    public function orWhereLte(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name`<={$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . "<={$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds OR a like condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to match. It'll be safely escaped
      * @return $this
      */
-    public function orWhereLike(string $name, mixed $value): static
+    public function orWhereLike(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name` LIKE {$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds OR a not like condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param mixed $value The value to match. It'll be safely escaped
      * @return $this
      */
-    public function orWhereNotLike(string $name, mixed $value): static
+    public function orWhereNotLike(string|array $name, mixed $value): static
     {
-        $this->where .= " OR  `$name` NOT LIKE {$this->connect->escape($value)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " NOT LIKE {$this->connect->escape($value)}";
         return $this;
     }
 
     /**
      * Adds OR an Is Null condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @return $this
      */
-    public function orWhereIsNull(string $name): static
+    public function orWhereIsNull(string|array $name): static
     {
-        $this->where .= " OR  `$name` IS NULL";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " IS NULL";
         return $this;
     }
 
     /**
      * Adds OR an Isn't Null condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @return $this
      */
-    public function orWhereIsNotNull(string $name): static
+    public function orWhereIsNotNull(string|array $name): static
     {
-        $this->where .= " OR  `$name` IS NOT NULL";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " IS NOT NULL";
         return $this;
     }
 
     /**
      * Adds OR a BETWEEN condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
@@ -708,23 +716,23 @@ class Update implements Statement, Executable
      * @param mixed $end The ending value. It'll be safely escaped
      * @return $this
      */
-    public function orWhereBetween(string $name, mixed $start, mixed $end): static
+    public function orWhereBetween(string|array $name, mixed $start, mixed $end): static
     {
-        $this->where .= " OR  `$name` BETWEEN {$this->connect->escape($start)} AND {$this->connect->escape($end)}";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " BETWEEN {$this->connect->escape($start)} AND {$this->connect->escape($end)}";
         return $this;
     }
 
     /**
      * Adds OR an IN condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param array|Select $list The list of values or a sub query. It'll be safely escaped
      * @return $this
      */
-    public function orWhereIn(string $name, array|Select $list): static
+    public function orWhereIn(string|array $name, array|Select $list): static
     {
         if (is_array($list)) {
             if (empty($list)) {
@@ -739,21 +747,21 @@ class Update implements Statement, Executable
             $list = "({$list->query()})";
         }
 
-        $this->where .= " OR  `$name` IN $list";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " IN $list";
         return $this;
     }
 
     /**
      * Adds OR a not IN condition to the "where" clause
      *
-     * @param string $name The column name. Don't use raw user input to form the column name
+     * @param string|array $name The column name. Don't use raw user input to form the column name
      *                     As it's unsafe for performance reasons
      *                     If needed, use AP\Mysql\Helper::escapeName() to sanitize it
      *                     If using a table or alias, write it as o`.`column to get `o`.`column`
      * @param array|Select $list The list of values or a sub query. It'll be safely escaped
      * @return $this
      */
-    public function orWhereNotIn(string $name, array|Select $list): static
+    public function orWhereNotIn(string|array $name, array|Select $list): static
     {
         if (is_array($list)) {
             if (empty($list)) {
@@ -768,7 +776,7 @@ class Update implements Statement, Executable
             $list = "({$list->query()})";
         }
 
-        $this->where .= " OR  `$name` NOT IN $list";
+        $this->where .= " OR  " . Helper::escapeNameUnsafe($name) . " NOT IN $list";
         return $this;
     }
 

@@ -169,4 +169,18 @@ class Helper
         }
         return '`' . str_replace('.', '`.`', $name) . '`';
     }
+
+    public static function escapeNameUnsafe(string|array $name): string
+    {
+        if (is_string($name)) {
+            return "`" . trim($name, "`") . "`";
+        }
+
+        foreach ($name as $v) {
+            if (!is_string($v)) {
+                throw new UnexpectedValueException('all elements must be strings');
+            }
+        }
+        return "`" . implode("`.`", $name) . "`";
+    }
 }
