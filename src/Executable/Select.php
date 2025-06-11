@@ -61,7 +61,7 @@ class Select implements Statement, Executable
         $columns = '';
         foreach ($this->columns as $k => $v) {
             if (is_string($v)) {
-                $columns .= $v == "*" ? $v : "`$v`";
+                $columns .= "`$v`";
             } elseif ($v instanceof Select) {
                 $columns .= "({$v->query()})";
             } elseif ($v instanceof Raw) {
