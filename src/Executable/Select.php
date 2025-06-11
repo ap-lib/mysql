@@ -61,13 +61,13 @@ class Select implements Statement, Executable
         $columns = '';
         foreach ($this->columns as $k => $v) {
             if (is_string($v)) {
-                $columns .= "`$v`";
+                $columns .= $v == "*" ? $v : "`$v`";
             } elseif ($v instanceof Select) {
                 $columns .= "({$v->query()})";
             } elseif ($v instanceof Raw) {
                 $columns .= "{$v->escape($this->connect)}";
             } elseif (is_array($v) && isset($v[0], $v[1]) && count($v) == 2) {
-                $columns .= "`$v[0]`.`$v[1]`";
+                $columns .= "`$v[0]`." . ($v[1] == "*" ? "*" : "`$v[1]`");
             } else {
                 throw new UnexpectedValueException(
                     'Column value must be string, AP\Mysql\Executable\Select or AP\Mysql\Raw'
