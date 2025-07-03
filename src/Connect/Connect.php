@@ -168,7 +168,9 @@ class Connect implements ConnectInterface
             }
         }
         if (is_array($value)) {
-            return json_encode($value, JSON_THROW_ON_ERROR);
+            return "'{$this->driver()->real_escape_string(
+                json_encode($value, JSON_THROW_ON_ERROR)
+                )}'";
         }
 
 
